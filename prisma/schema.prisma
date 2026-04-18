@@ -17,6 +17,7 @@ model User {
   premiumCoins    Int             @default(0)
   createdAt       DateTime        @default(now())
   inventory       UserInventory[]
+  listings        Listing[]
   accounts        Account[]
   sessions        Session[]
 }
@@ -80,4 +81,15 @@ model UserInventory {
   dateAcquired DateTime   @default(now())
   owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   card         CardGlobal @relation(fields: [url], references: [url])
+  listing      Listing?
+}
+
+model Listing {
+  id          String        @id @default(cuid())
+  sellerId    String
+  instanceId  String        @unique
+  price       Int
+  createdAt   DateTime      @default(now())
+  seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  inventory   UserInventory @relation(fields: [instanceId], references: [instanceId], onDelete: Cascade)
 }

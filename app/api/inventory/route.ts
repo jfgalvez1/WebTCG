@@ -11,13 +11,16 @@ export async function GET() {
   try {
     const inventory = await prisma.userInventory.findMany({
       where: { ownerId: session.user.id },
-      include: { card: true },
+      include: {
+        card: true,
+        listing: { select: { id: true, price: true } },
+      },
       orderBy: { dateAcquired: "desc" },
     });
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { standardCoins: true, premiumCoins: true, username: true },
+      select: { id: true, standardCoins: true, premiumCoins: true, username: true },
     });
 
     return NextResponse.json({ inventory, user });

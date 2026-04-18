@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/booster", label: "Booster", icon: "◈" },
   { href: "/inventory", label: "Inventory", icon: "⊞" },
   { href: "/registry", label: "Registry", icon: "◉" },
+  { href: "/marketplace", label: "Market", icon: "⟳" },
   { href: "/battlefield", label: "Battlefield", icon: "⚔" },
 ];
 
