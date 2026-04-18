@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
             factions: true,
             genesisMinted: true,
             createdAt: true,
+            rawMetadata: true,
           },
         },
         owner: {

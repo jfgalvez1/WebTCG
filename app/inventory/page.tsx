@@ -14,11 +14,30 @@ interface InventoryItem {
     baseAttack: number;
     baseHealth: number;
     factions: string[];
+    rawMetadata: {
+      monthlyVisits?: number;
+      ageInYears?: number;
+      source?: string;
+    } | null;
   };
 }
 
 type ViewMode = "grid" | "list";
 type FilterRarity = "ALL" | "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
+
+const RARITY_COLORS = {
+  GENESIS: "text-yellow-400 border-yellow-900/50 bg-yellow-950/20",
+  CLONE: "text-purple-400 border-purple-900/50 bg-purple-950/20",
+  COMMON: "text-cyan-400 border-cyan-900/50 bg-cyan-950/20",
+  DEAD_LINK: "text-red-400 border-red-900/50 bg-red-950/20",
+};
+
+const RARITY_ICONS = {
+  GENESIS: "◈",
+  CLONE: "⌬",
+  COMMON: "◇",
+  DEAD_LINK: "✕",
+};
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -27,7 +46,6 @@ export default function InventoryPage() {
   const [view, setView] = useState<ViewMode>("grid");
   const [filter, setFilter] = useState<FilterRarity>("ALL");
   const [search, setSearch] = useState("");
-  const [selectedCard, setSelectedCard] = useState<CardInstance | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
@@ -58,23 +76,16 @@ export default function InventoryPage() {
     };
   }
 
-  function selectCard(item: InventoryItem) {
-    const card = toCardInstance(item);
-    if (selectedCard?.instanceId === item.instanceId) {
-      setSelectedCard(null);
-      setSelectedItem(null);
-    } else {
-      setSelectedCard(card);
-      setSelectedItem(item);
-    }
+  function formatVisits(n: number): string {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return n.toString();
   }
 
-  const RARITY_COLORS = {
-    GENESIS: "text-yellow-400 border-yellow-900/50 bg-yellow-950/20",
-    CLONE: "text-purple-400 border-purple-900/50 bg-purple-950/20",
-    COMMON: "text-cyan-400 border-cyan-900/50 bg-cyan-950/20",
-    DEAD_LINK: "text-red-400 border-red-900/50 bg-red-950/20",
-  };
+  function selectItem(item: InventoryItem) {
+    setSelectedItem(selectedItem?.instanceId === item.instanceId ? null : item);
+  }
 
   const counts = {
     ALL: inventory.length,
@@ -119,13 +130,16 @@ export default function InventoryPage() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by domain..."
-            className="bg-black/50 border border-gray-800 rounded px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-cyan-700 transition-colors placeholder-gray-700 w-48"
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs">🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by domain..."
+              className="bg-black/50 border border-gray-800 rounded pl-8 pr-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-cyan-700 transition-colors placeholder-gray-700 w-52"
+            />
+          </div>
 
           <div className="flex gap-2 flex-wrap">
             {(["ALL", "GENESIS", "CLONE", "COMMON", "DEAD_LINK"] as FilterRarity[]).map((r) => (
@@ -136,7 +150,7 @@ export default function InventoryPage() {
                   filter === r
                     ? r === "ALL"
                       ? "border-gray-600 text-gray-200 bg-gray-800"
-                      : `${RARITY_COLORS[r as keyof typeof RARITY_COLORS]}`
+                      : RARITY_COLORS[r as keyof typeof RARITY_COLORS]
                     : "border-gray-800 text-gray-600 hover:text-gray-400"
                 }`}
               >
@@ -145,6 +159,13 @@ export default function InventoryPage() {
             ))}
           </div>
         </div>
+
+        {/* Results count */}
+        {!loading && (
+          <div className="text-gray-600 text-xs mb-4 font-mono">
+            // {filtered.length} card{filtered.length !== 1 ? "s" : ""} found
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-20 text-gray-600">
@@ -162,13 +183,19 @@ export default function InventoryPage() {
         ) : view === "grid" ? (
           <div className="flex flex-wrap gap-4">
             {filtered.map((item) => (
-              <Card
-                key={item.instanceId}
-                card={toCardInstance(item)}
-                size="md"
-                selected={selectedCard?.instanceId === item.instanceId}
-                onClick={() => selectCard(item)}
-              />
+              <div key={item.instanceId} className="flex flex-col items-center gap-1.5">
+                <Card
+                  card={toCardInstance(item)}
+                  size="md"
+                  selected={selectedItem?.instanceId === item.instanceId}
+                  onClick={() => selectItem(item)}
+                />
+                {/* Owner badge */}
+                <div className="w-40 flex items-center gap-1.5 px-2 py-1 rounded bg-gray-900/80 border border-gray-800">
+                  <span className="text-cyan-500 text-[10px] shrink-0">◈</span>
+                  <span className="text-cyan-300 font-mono text-[10px] truncate">{ownerUsername}</span>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -188,12 +215,17 @@ export default function InventoryPage() {
                 {filtered.map((item) => (
                   <tr
                     key={item.instanceId}
-                    className="hover:bg-gray-900/40 transition-colors cursor-pointer"
-                    onClick={() => selectCard(item)}
+                    className={`hover:bg-gray-900/40 transition-colors cursor-pointer ${
+                      selectedItem?.instanceId === item.instanceId ? "bg-gray-900/60" : ""
+                    }`}
+                    onClick={() => selectItem(item)}
                   >
                     <td className="px-4 py-2 text-cyan-400 font-mono">{item.url}</td>
-                    <td className={`px-4 py-2 font-bold ${RARITY_COLORS[item.rarity]?.split(" ")[0] ?? "text-gray-400"}`}>
-                      {item.rarity}
+                    <td className={`px-4 py-2 font-bold`}>
+                      <span className={`flex items-center gap-1 ${RARITY_COLORS[item.rarity]?.split(" ")[0] ?? "text-gray-400"}`}>
+                        <span>{RARITY_ICONS[item.rarity]}</span>
+                        <span>{item.rarity}</span>
+                      </span>
                     </td>
                     <td className="px-4 py-2 text-center text-red-400 font-bold">{item.card.baseAttack}</td>
                     <td className="px-4 py-2 text-center text-green-400 font-bold">{item.card.baseHealth}</td>
@@ -208,64 +240,137 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {/* Side panel for selected card */}
-        {selectedCard && selectedItem && (
-          <div className="fixed inset-y-0 right-0 w-72 bg-gray-950/98 border-l border-gray-800 p-4 shadow-2xl z-40 flex flex-col overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs uppercase tracking-widest text-gray-500">Card Details</span>
+        {/* Card modal */}
+        {selectedItem && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedItem(null)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+            {/* Modal panel */}
+            <div
+              className="relative z-10 flex flex-col sm:flex-row gap-10 items-center sm:items-start bg-gray-950 border border-gray-700 rounded-2xl shadow-2xl p-10 max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
               <button
-                onClick={() => { setSelectedCard(null); setSelectedItem(null); }}
-                className="text-gray-600 hover:text-gray-300 text-lg"
+                onClick={() => setSelectedItem(null)}
+                className="absolute top-4 right-4 text-gray-600 hover:text-white text-xl transition-colors"
               >
                 ✕
               </button>
-            </div>
-            <div className="flex justify-center mb-4">
-              <Card card={selectedCard} size="md" />
-            </div>
-            <div className="space-y-3 text-xs">
-              {/* Owner */}
-              <div className="border border-cyan-900/40 bg-cyan-950/20 rounded-lg p-3">
-                <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Owner</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-cyan-400 text-lg">◈</span>
-                  <span className="text-cyan-300 font-bold font-mono">{ownerUsername}</span>
+
+              {/* Big card — click to open the site */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
+                <a
+                  href={`https://${selectedItem.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative block"
+                  title={`Visit ${selectedItem.url}`}
+                >
+                  <Card card={toCardInstance(selectedItem)} size="xl" />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center pointer-events-none">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-mono tracking-widest border border-white/40 bg-black/60 px-3 py-1.5 rounded-lg">
+                      ↗ VISIT SITE
+                    </span>
+                  </div>
+                </a>
+                <span className="text-gray-600 text-[10px] font-mono">click card to visit site</span>
+              </div>
+
+              {/* Details */}
+              <div className="flex flex-col gap-4 text-xs font-mono min-w-0 flex-1">
+                {/* Owner */}
+                <div className="border border-cyan-900/50 bg-cyan-950/20 rounded-lg px-4 py-3">
+                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Owner</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-400 text-base">◈</span>
+                    <span className="text-cyan-300 font-bold text-sm">{ownerUsername}</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Instance ID */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Instance ID</div>
-                <div className="text-gray-500 font-mono break-all text-[10px]">{selectedItem.instanceId}</div>
-              </div>
+                {/* Website stats */}
+                {selectedItem.card.rawMetadata && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedItem.card.rawMetadata.monthlyVisits !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Monthly Visits</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {formatVisits(selectedItem.card.rawMetadata.monthlyVisits)}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">visits / mo</div>
+                      </div>
+                    )}
+                    {selectedItem.card.rawMetadata.ageInYears !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Domain Age</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {selectedItem.card.rawMetadata.ageInYears}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">years online</div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* Date acquired */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Date Acquired</div>
-                <div className="text-gray-400">
-                  {new Date(selectedItem.dateAcquired).toLocaleDateString("en-US", {
-                    year: "numeric", month: "short", day: "numeric",
-                  })}
-                </div>
-              </div>
-
-              {/* Connection Cost */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Connection Cost</div>
-                <div className="text-yellow-400 font-bold text-lg">
-                  ⚡ {Math.max(1, Math.round((selectedCard.baseAttack + selectedCard.baseHealth) / 3))}
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="border-t border-gray-800 pt-3 flex gap-4">
+                {/* Rarity */}
                 <div>
-                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Attack</div>
-                  <div className="text-red-400 font-bold text-lg">⚔ {selectedCard.baseAttack}</div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Rarity</div>
+                  <div className={`font-bold text-sm ${RARITY_COLORS[selectedItem.rarity]?.split(" ")[0]}`}>
+                    {RARITY_ICONS[selectedItem.rarity]} {selectedItem.rarity}
+                  </div>
                 </div>
+
+                {/* Stats row */}
+                <div className="flex gap-6">
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Attack</div>
+                    <div className="text-red-400 font-bold text-2xl">⚔ {selectedItem.card.baseAttack}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Health</div>
+                    <div className="text-green-400 font-bold text-2xl">♥ {selectedItem.card.baseHealth}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Cost</div>
+                    <div className="text-yellow-400 font-bold text-2xl">
+                      ⚡{Math.max(1, Math.round((selectedItem.card.baseAttack + selectedItem.card.baseHealth) / 3))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Factions */}
+                {selectedItem.card.factions.length > 0 && (
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-2">Factions</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedItem.card.factions.map((f) => (
+                        <span key={f} className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 bg-gray-900/60">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Date acquired */}
                 <div>
-                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Health</div>
-                  <div className="text-green-400 font-bold text-lg">♥ {selectedCard.baseHealth}</div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Acquired</div>
+                  <div className="text-gray-400">
+                    {new Date(selectedItem.dateAcquired).toLocaleDateString("en-US", {
+                      year: "numeric", month: "long", day: "numeric",
+                    })}
+                  </div>
+                </div>
+
+                {/* Instance ID */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Instance ID</div>
+                  <div className="text-gray-600 break-all text-[10px]">{selectedItem.instanceId}</div>
                 </div>
               </div>
             </div>

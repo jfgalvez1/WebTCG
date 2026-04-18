@@ -15,6 +15,11 @@ interface RegistryItem {
     baseHealth: number;
     factions: string[];
     createdAt: string;
+    rawMetadata: {
+      monthlyVisits?: number;
+      ageInYears?: number;
+      source?: string;
+    } | null;
   };
 }
 
@@ -87,6 +92,13 @@ export default function RegistryPage() {
     COMMON: items.filter((i) => i.rarity === "COMMON").length,
     DEAD_LINK: items.filter((i) => i.rarity === "DEAD_LINK").length,
   };
+
+  function formatVisits(n: number): string {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return n.toString();
+  }
 
   function toCardInstance(item: RegistryItem) {
     return {
@@ -322,6 +334,30 @@ export default function RegistryPage() {
                     <span className="text-cyan-300 font-bold text-sm">{selectedCard.owner.username}</span>
                   </div>
                 </div>
+
+                {/* Website stats */}
+                {selectedCard.card.rawMetadata && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedCard.card.rawMetadata.monthlyVisits !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Monthly Visits</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {formatVisits(selectedCard.card.rawMetadata.monthlyVisits)}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">visits / mo</div>
+                      </div>
+                    )}
+                    {selectedCard.card.rawMetadata.ageInYears !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Domain Age</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {selectedCard.card.rawMetadata.ageInYears}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">years online</div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Rarity */}
                 <div>
