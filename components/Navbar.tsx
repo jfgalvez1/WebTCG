@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/registrar", label: "Registrar", icon: "⊕" },
   { href: "/booster", label: "Booster", icon: "◈" },
   { href: "/inventory", label: "Inventory", icon: "⊞" },
+  { href: "/registry", label: "Registry", icon: "◉" },
   { href: "/battlefield", label: "Battlefield", icon: "⚔" },
 ];
 

@@ -22,17 +22,20 @@ type FilterRarity = "ALL" | "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [ownerUsername, setOwnerUsername] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("grid");
   const [filter, setFilter] = useState<FilterRarity>("ALL");
   const [search, setSearch] = useState("");
   const [selectedCard, setSelectedCard] = useState<CardInstance | null>(null);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
     fetch("/api/inventory")
       .then((r) => r.json())
       .then((data) => {
         setInventory(data.inventory ?? []);
+        setOwnerUsername(data.user?.username ?? "");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -53,6 +56,17 @@ export default function InventoryPage() {
       factions: item.card.factions,
       dateAcquired: item.dateAcquired,
     };
+  }
+
+  function selectCard(item: InventoryItem) {
+    const card = toCardInstance(item);
+    if (selectedCard?.instanceId === item.instanceId) {
+      setSelectedCard(null);
+      setSelectedItem(null);
+    } else {
+      setSelectedCard(card);
+      setSelectedItem(item);
+    }
   }
 
   const RARITY_COLORS = {
@@ -147,18 +161,15 @@ export default function InventoryPage() {
           </div>
         ) : view === "grid" ? (
           <div className="flex flex-wrap gap-4">
-            {filtered.map((item) => {
-              const card = toCardInstance(item);
-              return (
-                <Card
-                  key={item.instanceId}
-                  card={card}
-                  size="md"
-                  selected={selectedCard?.instanceId === item.instanceId}
-                  onClick={() => setSelectedCard(selectedCard?.instanceId === item.instanceId ? null : card)}
-                />
-              );
-            })}
+            {filtered.map((item) => (
+              <Card
+                key={item.instanceId}
+                card={toCardInstance(item)}
+                size="md"
+                selected={selectedCard?.instanceId === item.instanceId}
+                onClick={() => selectCard(item)}
+              />
+            ))}
           </div>
         ) : (
           <div className="border border-gray-800 rounded-lg overflow-hidden">
@@ -178,9 +189,7 @@ export default function InventoryPage() {
                   <tr
                     key={item.instanceId}
                     className="hover:bg-gray-900/40 transition-colors cursor-pointer"
-                    onClick={() => setSelectedCard(
-                      selectedCard?.instanceId === item.instanceId ? null : toCardInstance(item)
-                    )}
+                    onClick={() => selectCard(item)}
                   >
                     <td className="px-4 py-2 text-cyan-400 font-mono">{item.url}</td>
                     <td className={`px-4 py-2 font-bold ${RARITY_COLORS[item.rarity]?.split(" ")[0] ?? "text-gray-400"}`}>
@@ -200,20 +209,63 @@ export default function InventoryPage() {
         )}
 
         {/* Side panel for selected card */}
-        {selectedCard && (
-          <div className="fixed inset-y-0 right-0 w-64 bg-gray-950/95 border-l border-gray-800 p-4 shadow-2xl z-40 flex flex-col">
+        {selectedCard && selectedItem && (
+          <div className="fixed inset-y-0 right-0 w-72 bg-gray-950/98 border-l border-gray-800 p-4 shadow-2xl z-40 flex flex-col overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs uppercase tracking-widest text-gray-500">Card Details</span>
-              <button onClick={() => setSelectedCard(null)} className="text-gray-600 hover:text-gray-300 text-lg">✕</button>
+              <button
+                onClick={() => { setSelectedCard(null); setSelectedItem(null); }}
+                className="text-gray-600 hover:text-gray-300 text-lg"
+              >
+                ✕
+              </button>
             </div>
             <div className="flex justify-center mb-4">
               <Card card={selectedCard} size="md" />
             </div>
-            <div className="space-y-2 text-xs">
+            <div className="space-y-3 text-xs">
+              {/* Owner */}
+              <div className="border border-cyan-900/40 bg-cyan-950/20 rounded-lg p-3">
+                <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Owner</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-cyan-400 text-lg">◈</span>
+                  <span className="text-cyan-300 font-bold font-mono">{ownerUsername}</span>
+                </div>
+              </div>
+
+              {/* Instance ID */}
               <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1">Connection Cost:</div>
+                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Instance ID</div>
+                <div className="text-gray-500 font-mono break-all text-[10px]">{selectedItem.instanceId}</div>
+              </div>
+
+              {/* Date acquired */}
+              <div className="border-t border-gray-800 pt-3">
+                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Date Acquired</div>
+                <div className="text-gray-400">
+                  {new Date(selectedItem.dateAcquired).toLocaleDateString("en-US", {
+                    year: "numeric", month: "short", day: "numeric",
+                  })}
+                </div>
+              </div>
+
+              {/* Connection Cost */}
+              <div className="border-t border-gray-800 pt-3">
+                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Connection Cost</div>
                 <div className="text-yellow-400 font-bold text-lg">
                   ⚡ {Math.max(1, Math.round((selectedCard.baseAttack + selectedCard.baseHealth) / 3))}
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="border-t border-gray-800 pt-3 flex gap-4">
+                <div>
+                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Attack</div>
+                  <div className="text-red-400 font-bold text-lg">⚔ {selectedCard.baseAttack}</div>
+                </div>
+                <div>
+                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Health</div>
+                  <div className="text-green-400 font-bold text-lg">♥ {selectedCard.baseHealth}</div>
                 </div>
               </div>
             </div>
