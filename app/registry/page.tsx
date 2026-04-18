@@ -270,90 +270,115 @@ export default function RegistryPage() {
           </div>
         )}
 
-        {/* Detail side panel */}
+        {/* Card modal */}
         {selectedCard && (
-          <div className="fixed inset-y-0 right-0 w-72 bg-gray-950/98 border-l border-gray-800 p-4 shadow-2xl z-40 flex flex-col overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs uppercase tracking-widest text-gray-500">Card Details</span>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedCard(null)}
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+            {/* Modal panel */}
+            <div
+              className="relative z-10 flex flex-col sm:flex-row gap-10 items-center sm:items-start bg-gray-950 border border-gray-700 rounded-2xl shadow-2xl p-10 max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
               <button
                 onClick={() => setSelectedCard(null)}
-                className="text-gray-600 hover:text-gray-300 text-lg"
+                className="absolute top-4 right-4 text-gray-600 hover:text-white text-xl transition-colors"
               >
                 ✕
               </button>
-            </div>
 
-            <div className="flex justify-center mb-4">
-              <Card card={toCardInstance(selectedCard)} size="md" />
-            </div>
-
-            <div className="space-y-3 text-xs">
-              {/* Owner highlight */}
-              <div className="border border-cyan-900/40 bg-cyan-950/20 rounded-lg p-3">
-                <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Owner</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-cyan-400 text-base">◈</span>
-                  <span className="text-cyan-300 font-bold font-mono text-sm">{selectedCard.owner.username}</span>
-                </div>
+              {/* Big card — click to open the site */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
+                <a
+                  href={`https://${selectedCard.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative block"
+                  title={`Visit ${selectedCard.url}`}
+                >
+                  <Card card={toCardInstance(selectedCard)} size="xl" />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center pointer-events-none">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-mono tracking-widest border border-white/40 bg-black/60 px-3 py-1.5 rounded-lg">
+                      ↗ VISIT SITE
+                    </span>
+                  </div>
+                </a>
+                <span className="text-gray-600 text-[10px] font-mono">click card to visit site</span>
               </div>
 
-              {/* Rarity */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Rarity</div>
-                <div className={`font-bold ${RARITY_COLORS[selectedCard.rarity]?.split(" ")[0]}`}>
-                  {RARITY_ICONS[selectedCard.rarity]} {selectedCard.rarity}
-                </div>
-              </div>
-
-              {/* Instance ID */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Instance ID</div>
-                <div className="text-gray-500 font-mono break-all text-[10px]">{selectedCard.instanceId}</div>
-              </div>
-
-              {/* Date minted */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Date Minted</div>
-                <div className="text-gray-400">
-                  {new Date(selectedCard.dateAcquired).toLocaleDateString("en-US", {
-                    year: "numeric", month: "long", day: "numeric",
-                  })}
-                </div>
-              </div>
-
-              {/* Connection Cost */}
-              <div className="border-t border-gray-800 pt-3">
-                <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Connection Cost</div>
-                <div className="text-yellow-400 font-bold text-lg">
-                  ⚡ {Math.max(1, Math.round((selectedCard.card.baseAttack + selectedCard.card.baseHealth) / 3))}
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="border-t border-gray-800 pt-3 flex gap-6">
-                <div>
-                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Attack</div>
-                  <div className="text-red-400 font-bold text-lg">⚔ {selectedCard.card.baseAttack}</div>
-                </div>
-                <div>
-                  <div className="text-gray-600 mb-1 uppercase tracking-widest text-[10px]">Health</div>
-                  <div className="text-green-400 font-bold text-lg">♥ {selectedCard.card.baseHealth}</div>
-                </div>
-              </div>
-
-              {/* Factions */}
-              {selectedCard.card.factions.length > 0 && (
-                <div className="border-t border-gray-800 pt-3">
-                  <div className="text-gray-600 mb-2 uppercase tracking-widest text-[10px]">Factions</div>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedCard.card.factions.map((f) => (
-                      <span key={f} className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 bg-gray-900/50">
-                        {f}
-                      </span>
-                    ))}
+              {/* Details */}
+              <div className="flex flex-col gap-4 text-xs font-mono min-w-0 flex-1">
+                {/* Owner */}
+                <div className="border border-cyan-900/50 bg-cyan-950/20 rounded-lg px-4 py-3">
+                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Owner</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-400 text-base">◈</span>
+                    <span className="text-cyan-300 font-bold text-sm">{selectedCard.owner.username}</span>
                   </div>
                 </div>
-              )}
+
+                {/* Rarity */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Rarity</div>
+                  <div className={`font-bold text-sm ${RARITY_COLORS[selectedCard.rarity]?.split(" ")[0]}`}>
+                    {RARITY_ICONS[selectedCard.rarity]} {selectedCard.rarity}
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div className="flex gap-6">
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Attack</div>
+                    <div className="text-red-400 font-bold text-2xl">⚔ {selectedCard.card.baseAttack}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Health</div>
+                    <div className="text-green-400 font-bold text-2xl">♥ {selectedCard.card.baseHealth}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Cost</div>
+                    <div className="text-yellow-400 font-bold text-2xl">
+                      ⚡{Math.max(1, Math.round((selectedCard.card.baseAttack + selectedCard.card.baseHealth) / 3))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Factions */}
+                {selectedCard.card.factions.length > 0 && (
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-2">Factions</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedCard.card.factions.map((f) => (
+                        <span key={f} className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 bg-gray-900/60">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Date minted */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Minted</div>
+                  <div className="text-gray-400">
+                    {new Date(selectedCard.dateAcquired).toLocaleDateString("en-US", {
+                      year: "numeric", month: "long", day: "numeric",
+                    })}
+                  </div>
+                </div>
+
+                {/* Instance ID */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Instance ID</div>
+                  <div className="text-gray-600 break-all text-[10px]">{selectedCard.instanceId}</div>
+                </div>
+              </div>
             </div>
           </div>
         )}

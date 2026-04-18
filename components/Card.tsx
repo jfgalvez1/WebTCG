@@ -31,7 +31,7 @@ const FACTION_COLORS: Record<string, string> = {
 
 interface CardProps {
   card: CardInstance & { currentHealth?: number; isTapped?: boolean };
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   selected?: boolean;
   onClick?: () => void;
   dimmed?: boolean;
@@ -59,6 +59,7 @@ export default function Card({
     sm: "w-28 h-40 text-xs",
     md: "w-40 h-56 text-sm",
     lg: "w-48 h-64 text-sm",
+    xl: "w-64 h-88 text-base",
   };
 
   const attackPenalty = card.rarity === "CLONE" ? -1 : 0;
@@ -80,11 +81,11 @@ export default function Card({
       `}
     >
       {/* Header */}
-      <div className="px-2 pt-1.5 pb-1">
+      <div className="px-2 pt-1.5 pb-1 text-center">
         <div className="text-[9px] text-gray-500 uppercase tracking-widest truncate">
           {rarityLabel}
         </div>
-        <div className="text-white font-bold truncate leading-tight" style={{ fontSize: size === "sm" ? "9px" : "11px" }}>
+        <div className="text-white font-bold truncate leading-tight" style={{ fontSize: size === "sm" ? "9px" : size === "xl" ? "15px" : "12px" }}>
           {card.url}
         </div>
       </div>
@@ -136,7 +137,7 @@ export default function Card({
       <div className="flex items-center justify-between px-2 pb-1.5">
         <div className="flex items-center gap-0.5">
           <span className="text-red-400" style={{ fontSize: "9px" }}>⚔</span>
-          <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "10px" : "13px" }}>{displayAttack}</span>
+          <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "10px" : size === "xl" ? "18px" : "13px" }}>{displayAttack}</span>
         </div>
         {showCost && connectionCost !== undefined && (
           <div className="text-yellow-400 font-bold" style={{ fontSize: "9px" }}>
@@ -145,7 +146,7 @@ export default function Card({
         )}
         <div className="flex items-center gap-0.5">
           <span className="text-green-400" style={{ fontSize: "9px" }}>♥</span>
-          <span className={`font-bold ${displayHealth <= 2 ? "text-red-400" : "text-white"}`} style={{ fontSize: size === "sm" ? "10px" : "13px" }}>
+          <span className={`font-bold ${displayHealth <= 2 ? "text-red-400" : "text-white"}`} style={{ fontSize: size === "sm" ? "10px" : size === "xl" ? "18px" : "13px" }}>
             {displayHealth}
           </span>
         </div>
