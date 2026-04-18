@@ -28,7 +28,7 @@ export default function BattlefieldPage() {
       .then((r) => r.json())
       .then((data) => {
         const cards: CardInstance[] = (data.inventory ?? []).map((item: {
-          instanceId: string; url: string; rarity: "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
+          instanceId: string; url: string; rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
           dateAcquired: string; card: { baseAttack: number; baseHealth: number; factions: string[] };
         }) => ({
           instanceId: item.instanceId,

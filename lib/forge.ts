@@ -5,7 +5,6 @@ export interface ForgeResult {
   factions: string[];
   rawMetadata: Record<string, unknown>;
   mintCost: number;
-  cloneCost: number;
 }
 
 export function sanitizeUrl(input: string): string {
@@ -113,7 +112,6 @@ export async function forgeDomain(rawUrl: string): Promise<ForgeResult> {
   const baseHealth = calcHealth(ageInYears);
   const factions = calcFactions(keywords);
   const mintCost = calcMintCost(monthlyVisits);
-  const cloneCost = Math.round(mintCost * 0.3);
 
   return {
     url,
@@ -121,7 +119,6 @@ export async function forgeDomain(rawUrl: string): Promise<ForgeResult> {
     baseHealth,
     factions,
     mintCost,
-    cloneCost,
     rawMetadata: {
       monthlyVisits,
       ageInYears,

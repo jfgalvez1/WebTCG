@@ -41,7 +41,6 @@ export default function DashboardPage() {
 
   const RARITY_COLORS = {
     GENESIS: "text-yellow-400",
-    CLONE: "text-purple-400",
     COMMON: "text-cyan-400",
     DEAD_LINK: "text-red-400",
   };

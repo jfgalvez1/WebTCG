@@ -19,42 +19,41 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
 
     const mintCost = calcMintCostFromAttack(card.baseAttack);
-    const cloneCost = Math.round(mintCost * 0.3);
 
-    // Use a transaction to prevent race conditions (the 1-of-1 guarantee)
+    // Use a transaction to prevent race conditions (true 1-of-1 guarantee)
     const result = await prisma.$transaction(async (tx) => {
       const freshCard = await tx.cardGlobal.findUnique({ where: { url } });
       if (!freshCard) throw new Error("Card not found.");
 
-      const isGenesis = !freshCard.genesisMinted;
-      const cost = isGenesis ? mintCost : cloneCost;
-      const rarity = isGenesis ? "GENESIS" : "CLONE";
+      // Check if this card is already owned by anyone — enforce 1-of-1
+      const existingOwner = await tx.userInventory.findUnique({ where: { url } });
+      if (existingOwner) {
+        throw new Error("This card is already owned by another player. Every card is 1-of-1.");
+      }
 
-      if (user.premiumCoins < cost) {
-        throw new Error(`Insufficient premium coins. Need ${cost}, have ${user.premiumCoins}.`);
+      if (user.premiumCoins < mintCost) {
+        throw new Error(`Insufficient premium coins. Need ${mintCost}, have ${user.premiumCoins}.`);
       }
 
       // Mark genesis as minted
-      if (isGenesis) {
-        await tx.cardGlobal.update({ where: { url }, data: { genesisMinted: true } });
-      }
+      await tx.cardGlobal.update({ where: { url }, data: { genesisMinted: true } });
 
       // Deduct coins
       await tx.user.update({
         where: { id: user.id },
-        data: { premiumCoins: { decrement: cost } },
+        data: { premiumCoins: { decrement: mintCost } },
       });
 
-      // Add to inventory
+      // Add to inventory as GENESIS 1-of-1
       const instance = await tx.userInventory.create({
         data: {
           ownerId: user.id,
           url,
-          rarity,
+          rarity: "GENESIS",
         },
       });
 
-      return { instance, rarity, cost, isGenesis };
+      return { instance, rarity: "GENESIS", cost: mintCost };
     });
 
     return NextResponse.json(result);

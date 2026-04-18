@@ -5,15 +5,13 @@ import { CardInstance } from "@/store/gameStore";
 
 const RARITY_STYLES = {
   GENESIS: "border-yellow-400 shadow-yellow-400/60 bg-gradient-to-b from-yellow-950/80 to-gray-950",
-  CLONE: "border-purple-500 shadow-purple-500/40 bg-gradient-to-b from-purple-950/80 to-gray-950",
   COMMON: "border-cyan-700 shadow-cyan-700/30 bg-gradient-to-b from-cyan-950/60 to-gray-950",
   DEAD_LINK: "border-red-900 shadow-red-900/20 bg-gradient-to-b from-red-950/60 to-gray-950",
 };
 
 const RARITY_LABELS = {
   GENESIS: "◈ GENESIS 1-OF-1",
-  CLONE: "⌬ CLONE",
-  COMMON: "◇ COMMON",
+  COMMON: "◇ COMMON 1-OF-1",
   DEAD_LINK: "✕ DEAD LINK",
 };
 
@@ -62,10 +60,8 @@ export default function Card({
     xl: "w-64 h-88 text-base",
   };
 
-  const attackPenalty = card.rarity === "CLONE" ? -1 : 0;
-  const healthPenalty = card.rarity === "CLONE" ? -1 : 0;
-  const displayAttack = card.baseAttack + attackPenalty;
-  const displayHealth = hp + healthPenalty;
+  const displayAttack = card.baseAttack;
+  const displayHealth = hp;
 
   return (
     <div

@@ -12,7 +12,6 @@ interface ForgedCard {
   factions: string[];
   genesisMinted: boolean;
   mintCost: number;
-  cloneCost: number;
 }
 
 export default function RegistrarPage() {
@@ -46,7 +45,7 @@ export default function RegistrarPage() {
     }
   }
 
-  async function handleMint(isGenesis: boolean) {
+  async function handleMint() {
     if (!forged) return;
     setError("");
     setSuccess("");
@@ -65,7 +64,7 @@ export default function RegistrarPage() {
       setError(data.error || "Mint failed.");
     } else {
       setSuccess(
-        `✓ Successfully minted ${data.rarity} card for "${forged.url}"! Cost: ${data.cost} Premium Coins.`
+        `✓ Successfully minted GENESIS 1-of-1 card for "${forged.url}"! Cost: ${data.cost} Premium Coins.`
       );
       setForged((prev) => prev ? { ...prev, genesisMinted: true } : null);
     }
@@ -75,7 +74,7 @@ export default function RegistrarPage() {
     ? {
         instanceId: "preview",
         url: forged.url,
-        rarity: forged.genesisMinted ? "CLONE" : "GENESIS",
+        rarity: "GENESIS",
         baseAttack: forged.baseAttack,
         baseHealth: forged.baseHealth,
         factions: forged.factions,
@@ -94,7 +93,7 @@ export default function RegistrarPage() {
             <h1 className="text-xl font-bold tracking-widest uppercase">Domain Registrar</h1>
           </div>
           <p className="text-gray-600 text-xs mt-1 ml-8">
-            // Mint specific URLs as unique cards. Genesis 1-of-1 cards are forever.
+            // Every card is 1-of-1. Once claimed, no other player can ever own it.
           </p>
         </div>
 
@@ -144,48 +143,38 @@ export default function RegistrarPage() {
                   <Row label="Base Health" value={`${forged.baseHealth} ♥`} color="text-green-400" />
                   <Row label="Factions" value={forged.factions.join(", ")} color="text-purple-400" />
                   <Row
-                    label="Genesis Status"
-                    value={forged.genesisMinted ? "⚠ Already Minted" : "✓ Available"}
-                    color={forged.genesisMinted ? "text-orange-400" : "text-green-400"}
+                    label="Ownership"
+                    value={forged.genesisMinted ? "⊗ Already Claimed" : "✓ Unclaimed"}
+                    color={forged.genesisMinted ? "text-red-400" : "text-green-400"}
                   />
                 </div>
 
-                <div className="border-t border-gray-800 pt-4 space-y-3">
-                  {!forged.genesisMinted && (
+                <div className="border-t border-gray-800 pt-4">
+                  {!forged.genesisMinted ? (
                     <div className="border border-yellow-900/50 bg-yellow-950/20 rounded p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-yellow-400 font-bold text-xs">◈ GENESIS 1-OF-1</span>
                         <span className="text-yellow-300 font-bold text-sm">{forged.mintCost.toLocaleString()} ⊕</span>
                       </div>
                       <p className="text-gray-500 text-xs mb-3">
-                        The only copy ever. +0/+0 stats. Unique visual treatment.
+                        The only copy that will ever exist. No clones. No duplicates.
                       </p>
                       <button
-                        onClick={() => handleMint(true)}
+                        onClick={() => handleMint()}
                         disabled={minting}
                         className="w-full bg-yellow-900/60 hover:bg-yellow-800/60 border border-yellow-600 text-yellow-300 font-bold py-2 rounded text-xs uppercase tracking-widest transition-all disabled:opacity-50"
                       >
                         {minting ? "MINTING..." : `▶ MINT GENESIS — ${forged.mintCost.toLocaleString()} ⊕`}
                       </button>
                     </div>
-                  )}
-
-                  <div className="border border-purple-900/50 bg-purple-950/20 rounded p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-purple-400 font-bold text-xs">⌬ CLONE</span>
-                      <span className="text-purple-300 font-bold text-sm">{forged.cloneCost.toLocaleString()} ⊕</span>
+                  ) : (
+                    <div className="border border-red-900/50 bg-red-950/20 rounded p-3 text-center">
+                      <div className="text-red-400 font-bold text-xs mb-1">⊗ ALREADY CLAIMED</div>
+                      <p className="text-gray-600 text-xs">
+                        This card is owned by another player. Every card is 1-of-1 — no duplicates exist.
+                      </p>
                     </div>
-                    <p className="text-gray-500 text-xs mb-3">
-                      Duplicate card. -1/-1 stat penalty vs Genesis.
-                    </p>
-                    <button
-                      onClick={() => handleMint(false)}
-                      disabled={minting}
-                      className="w-full bg-purple-900/60 hover:bg-purple-800/60 border border-purple-700 text-purple-300 font-bold py-2 rounded text-xs uppercase tracking-widest transition-all disabled:opacity-50"
-                    >
-                      {minting ? "MINTING..." : `▶ MINT CLONE — ${forged.cloneCost.toLocaleString()} ⊕`}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             )}

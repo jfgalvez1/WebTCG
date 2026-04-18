@@ -16,11 +16,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.cardGlobal.findUnique({ where: { url: cleanUrl } });
     if (existing) {
       const mintCost = calcMintCostFromAttack(existing.baseAttack);
-      return NextResponse.json({
-        ...existing,
-        mintCost,
-        cloneCost: Math.round(mintCost * 0.3),
-      });
+      return NextResponse.json({ ...existing, mintCost });
     }
 
     const result = await forgeDomain(cleanUrl);
@@ -37,7 +33,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ...card, mintCost: result.mintCost, cloneCost: result.cloneCost });
+    return NextResponse.json({ ...card, mintCost: result.mintCost });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Forge failed." }, { status: 500 });

@@ -7,7 +7,7 @@ import Card from "@/components/Card";
 interface RegistryItem {
   instanceId: string;
   url: string;
-  rarity: "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
+  rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
   dateAcquired: string;
   owner: { username: string };
   card: {
@@ -23,19 +23,17 @@ interface RegistryItem {
   };
 }
 
-type FilterRarity = "ALL" | "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
+type FilterRarity = "ALL" | "GENESIS" | "COMMON" | "DEAD_LINK";
 type ViewMode = "grid" | "list";
 
 const RARITY_COLORS = {
   GENESIS: "text-yellow-400 border-yellow-900/50 bg-yellow-950/20",
-  CLONE: "text-purple-400 border-purple-900/50 bg-purple-950/20",
   COMMON: "text-cyan-400 border-cyan-900/50 bg-cyan-950/20",
   DEAD_LINK: "text-red-400 border-red-900/50 bg-red-950/20",
 };
 
 const RARITY_ICONS = {
   GENESIS: "◈",
-  CLONE: "⌬",
   COMMON: "◇",
   DEAD_LINK: "✕",
 };
@@ -88,7 +86,6 @@ export default function RegistryPage() {
   const rarityCounts: Record<FilterRarity, number> = {
     ALL: total,
     GENESIS: items.filter((i) => i.rarity === "GENESIS").length,
-    CLONE: items.filter((i) => i.rarity === "CLONE").length,
     COMMON: items.filter((i) => i.rarity === "COMMON").length,
     DEAD_LINK: items.filter((i) => i.rarity === "DEAD_LINK").length,
   };
@@ -155,7 +152,7 @@ export default function RegistryPage() {
 
           {/* Rarity filters */}
           <div className="flex gap-2 flex-wrap">
-            {(["ALL", "GENESIS", "CLONE", "COMMON", "DEAD_LINK"] as FilterRarity[]).map((r) => (
+            {(["ALL", "GENESIS", "COMMON", "DEAD_LINK"] as FilterRarity[]).map((r) => (
               <button
                 key={r}
                 onClick={() => setRarity(r)}

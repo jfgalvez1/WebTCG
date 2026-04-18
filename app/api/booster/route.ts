@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { drawBoosterPack, forgeDomain } from "@/lib/forge";
+import { forgeDomain, BOOSTER_PACK_POOL } from "@/lib/forge";
 
 const BOOSTER_COST = 100;
+const PACK_SIZE = 5;
 
 export async function POST() {
   const session = await auth();
@@ -22,7 +23,25 @@ export async function POST() {
       );
     }
 
-    const cards = await drawBoosterPack();
+    // Find URLs already owned by anyone — every card is 1-of-1
+    const ownedInventory = await prisma.userInventory.findMany({
+      select: { url: true },
+    });
+    const ownedUrls = new Set(ownedInventory.map((i) => i.url));
+
+    // Filter the pool to only unclaimed URLs, then shuffle and pick PACK_SIZE
+    const available = BOOSTER_PACK_POOL.filter((url) => !ownedUrls.has(url));
+    const shuffled = available.sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, PACK_SIZE);
+
+    if (selected.length === 0) {
+      return NextResponse.json(
+        { error: "All booster pack cards are currently claimed. Try again later or use the Registrar." },
+        { status: 409 }
+      );
+    }
+
+    const cards = await Promise.all(selected.map(forgeDomain));
 
     const result = await prisma.$transaction(async (tx) => {
       await tx.user.update({
@@ -41,7 +60,7 @@ export async function POST() {
               baseAttack: card.baseAttack,
               baseHealth: card.baseHealth,
               factions: card.factions,
-              genesisMinted: false,
+              genesisMinted: true,
               rawMetadata: card.rawMetadata as object,
             },
           });

@@ -68,7 +68,6 @@ model CardGlobal {
 
 enum CardRarity {
   GENESIS
-  CLONE
   COMMON
   DEAD_LINK
 }
@@ -76,7 +75,7 @@ enum CardRarity {
 model UserInventory {
   instanceId   String     @id @default(cuid())
   ownerId      String
-  url          String
+  url          String     @unique
   rarity       CardRarity
   dateAcquired DateTime   @default(now())
   owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)

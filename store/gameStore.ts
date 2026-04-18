@@ -4,7 +4,7 @@ import { create } from "zustand";
 export interface CardInstance {
   instanceId: string;
   url: string;
-  rarity: "GENESIS" | "CLONE" | "COMMON" | "DEAD_LINK";
+  rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
   baseAttack: number;
   baseHealth: number;
   factions: string[];
