@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CardInstance } from "@/store/gameStore";
 
 const RARITY_STYLES = {
@@ -47,9 +48,12 @@ export default function Card({
   connectionCost,
   showCost,
 }: CardProps) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
   const rarityStyle = RARITY_STYLES[card.rarity];
   const rarityLabel = RARITY_LABELS[card.rarity];
   const hp = card.currentHealth ?? card.baseHealth;
+  const screenshotUrl = `/api/screenshot?url=${card.url}`;
 
   const sizeClasses = {
     sm: "w-28 h-40 text-xs",
@@ -87,10 +91,30 @@ export default function Card({
 
       {/* Art area */}
       <div className="flex-1 mx-2 rounded border border-current/20 flex items-center justify-center bg-black/40 relative overflow-hidden">
-        <div className="text-center opacity-60">
-          <div className="text-2xl">{getFactionIcon(card.factions[0])}</div>
-          <div className="text-[9px] text-gray-600 mt-1">{card.factions[0]}</div>
-        </div>
+        {!imgError && (
+          <img
+            src={screenshotUrl}
+            alt={card.url}
+            onLoad={() => setImgLoading(false)}
+            onError={() => { setImgError(true); setImgLoading(false); }}
+            className={`absolute inset-0 w-full h-full object-cover object-top opacity-80 transition-opacity duration-500 ${imgLoading ? "opacity-0" : "opacity-80"}`}
+            draggable={false}
+          />
+        )}
+        {/* Loading shimmer */}
+        {imgLoading && !imgError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+            <div className="w-4 h-4 border-2 border-current/40 border-t-current/80 rounded-full animate-spin" />
+            <div className="text-[8px] text-gray-600 font-mono">LOADING...</div>
+          </div>
+        )}
+        {/* Fallback icon */}
+        {imgError && (
+          <div className="text-center opacity-60">
+            <div className="text-2xl">{getFactionIcon(card.factions[0])}</div>
+            <div className="text-[9px] text-gray-600 mt-1">{card.factions[0]}</div>
+          </div>
+        )}
         {/* Scan line overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.02] to-transparent bg-[length:100%_4px] pointer-events-none" />
       </div>
