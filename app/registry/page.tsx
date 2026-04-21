@@ -12,7 +12,8 @@ interface RegistryItem {
   owner: { username: string };
   card: {
     baseAttack: number;
-    baseHealth: number;
+    baseDef: number;
+    baseConnection: number;
     factions: string[];
     createdAt: string;
     rawMetadata: {
@@ -103,7 +104,8 @@ export default function RegistryPage() {
       url: item.url,
       rarity: item.rarity,
       baseAttack: item.card.baseAttack,
-      baseHealth: item.card.baseHealth,
+      baseDef: item.card.baseDef,
+      baseConnection: item.card.baseConnection,
       factions: item.card.factions,
       dateAcquired: item.dateAcquired,
     };
@@ -234,8 +236,9 @@ export default function RegistryPage() {
                   <th className="px-4 py-3 text-left">Domain</th>
                   <th className="px-4 py-3 text-left">Owner</th>
                   <th className="px-4 py-3 text-left">Rarity</th>
-                  <th className="px-4 py-3 text-center">⚔</th>
-                  <th className="px-4 py-3 text-center">♥</th>
+                  <th className="px-4 py-3 text-center">ATK</th>
+                  <th className="px-4 py-3 text-center">CONN</th>
+                  <th className="px-4 py-3 text-center">DEF</th>
                   <th className="px-4 py-3 text-left">Factions</th>
                   <th className="px-4 py-3 text-left">Minted</th>
                 </tr>
@@ -265,7 +268,8 @@ export default function RegistryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-center text-red-400 font-bold">{item.card.baseAttack}</td>
-                    <td className="px-4 py-2 text-center text-green-400 font-bold">{item.card.baseHealth}</td>
+                    <td className="px-4 py-2 text-center text-green-400 font-bold">{item.card.baseConnection}%</td>
+                    <td className="px-4 py-2 text-center text-blue-400 font-bold">{item.card.baseDef}</td>
                     <td className="px-4 py-2 text-gray-500">{item.card.factions.join(", ")}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {new Date(item.dateAcquired).toLocaleDateString("en-US", {
@@ -371,13 +375,13 @@ export default function RegistryPage() {
                     <div className="text-red-400 font-bold text-2xl">⚔ {selectedCard.card.baseAttack}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Health</div>
-                    <div className="text-green-400 font-bold text-2xl">♥ {selectedCard.card.baseHealth}</div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Def</div>
+                    <div className="text-blue-400 font-bold text-2xl">🛡 {selectedCard.card.baseDef}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Cost</div>
-                    <div className="text-yellow-400 font-bold text-2xl">
-                      ⚡{Math.max(1, Math.round((selectedCard.card.baseAttack + selectedCard.card.baseHealth) / 3))}
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Connection</div>
+                    <div className="text-green-400 font-bold text-2xl">
+                      ⚡{selectedCard.card.baseConnection}%
                     </div>
                   </div>
                 </div>

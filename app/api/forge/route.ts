@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
       data: {
         url: result.url,
         baseAttack: result.baseAttack,
-        baseHealth: result.baseHealth,
+        baseDef: result.baseDef,
+        baseConnection: result.baseConnection,
         factions: result.factions,
         genesisMinted: false,
         rawMetadata: result.rawMetadata as object,

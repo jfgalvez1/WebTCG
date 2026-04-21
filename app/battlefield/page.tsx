@@ -29,13 +29,14 @@ export default function BattlefieldPage() {
       .then((data) => {
         const cards: CardInstance[] = (data.inventory ?? []).map((item: {
           instanceId: string; url: string; rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
-          dateAcquired: string; card: { baseAttack: number; baseHealth: number; factions: string[] };
+          dateAcquired: string; card: { baseAttack: number; baseDef: number; baseConnection: number; factions: string[] };
         }) => ({
           instanceId: item.instanceId,
           url: item.url,
           rarity: item.rarity,
           baseAttack: item.card.baseAttack,
-          baseHealth: item.card.baseHealth,
+          baseDef: item.card.baseDef,
+          baseConnection: item.card.baseConnection,
           factions: item.card.factions,
           dateAcquired: item.dateAcquired,
         }));
@@ -53,7 +54,7 @@ export default function BattlefieldPage() {
   function handlePlayCard(instanceId: string) {
     const card = playerHand.find((c) => c.instanceId === instanceId);
     if (!card) return;
-    const cost = Math.max(1, Math.round((card.baseAttack + card.baseHealth) / 3));
+    const cost = Math.max(1, Math.round((card.baseAttack + card.baseDef) / 3));
     if (playerConnections < cost) {
       addLog(`✕ Not enough connections to deploy ${card.url} (need ${cost})`);
       return;
@@ -328,7 +329,7 @@ export default function BattlefieldPage() {
               <div className="text-gray-800 text-xs self-center">No cards in hand</div>
             ) : (
               playerHand.map((card) => {
-                const cost = Math.max(1, Math.round((card.baseAttack + card.baseHealth) / 3));
+                const cost = Math.max(1, Math.round((card.baseAttack + card.baseDef) / 3));
                 const canPlay = playerConnections >= cost && phase === "main";
                 return (
                   <Card

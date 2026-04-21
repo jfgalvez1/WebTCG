@@ -1,7 +1,8 @@
 export interface ForgeResult {
   url: string;
   baseAttack: number;
-  baseHealth: number;
+  baseDef: number;
+  baseConnection: number;
   factions: string[];
   rawMetadata: Record<string, unknown>;
   mintCost: number;
@@ -23,8 +24,14 @@ function calcAttack(monthlyVisits: number): number {
   return 8;
 }
 
-function calcHealth(ageInYears: number): number {
+function calcDef(ageInYears: number): number {
   return Math.max(1, Math.round(ageInYears * 2));
+}
+
+function calcConnection(monthlyVisits: number, factions: string[]): number {
+  const visitScore = Math.min(60, Math.round(Math.log10(Math.max(1, monthlyVisits)) * 8) - 16);
+  const factionBonus = factions.length * 5;
+  return Math.max(10, Math.min(95, visitScore + factionBonus));
 }
 
 function calcFactions(keywords: string[]): string[] {
@@ -109,14 +116,16 @@ export async function forgeDomain(rawUrl: string): Promise<ForgeResult> {
   }
 
   const baseAttack = calcAttack(monthlyVisits);
-  const baseHealth = calcHealth(ageInYears);
+  const baseDef = calcDef(ageInYears);
   const factions = calcFactions(keywords);
+  const baseConnection = calcConnection(monthlyVisits, factions);
   const mintCost = calcMintCost(monthlyVisits);
 
   return {
     url,
     baseAttack,
-    baseHealth,
+    baseDef,
+    baseConnection,
     factions,
     mintCost,
     rawMetadata: {

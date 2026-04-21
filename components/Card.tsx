@@ -50,7 +50,7 @@ export default function Card({
   const [imgLoading, setImgLoading] = useState(true);
   const rarityStyle = RARITY_STYLES[card.rarity];
   const rarityLabel = RARITY_LABELS[card.rarity];
-  const hp = card.currentHealth ?? card.baseHealth;
+  const hp = card.currentHealth ?? card.baseDef;
   const screenshotUrl = `/api/screenshot?url=${card.url}`;
 
   const sizeClasses = {
@@ -61,7 +61,8 @@ export default function Card({
   };
 
   const displayAttack = card.baseAttack;
-  const displayHealth = hp;
+  const displayDef = hp;
+  const displayConnection = card.baseConnection;
 
   return (
     <div
@@ -130,20 +131,26 @@ export default function Card({
       </div>
 
       {/* Stats row */}
-      <div className="flex items-center justify-between px-2 pb-1.5">
-        <div className="flex items-center gap-0.5">
-          <span className="text-red-400" style={{ fontSize: "9px" }}>⚔</span>
-          <span className="text-white font-bold" style={{ fontSize: size === "sm" ? "10px" : size === "xl" ? "18px" : "13px" }}>{displayAttack}</span>
+      <div className="flex items-stretch bg-gray-950/80 border-t border-gray-800 rounded-b overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center py-1">
+          <span className="text-red-500 font-bold tracking-widest uppercase" style={{ fontSize: "10px" }}>ATK</span>
+          <span className="text-white font-bold leading-none" style={{ fontSize: size === "sm" ? "14px" : size === "xl" ? "24px" : "17px" }}>{displayAttack}</span>
+        </div>
+        <div className="w-px bg-gray-800 self-stretch" />
+        <div className="flex-1 flex flex-col items-center justify-center py-1">
+          <span className="text-green-400 font-bold tracking-widest uppercase" style={{ fontSize: "10px" }}>CONN</span>
+          <span className="text-green-300 font-bold leading-none" style={{ fontSize: size === "sm" ? "11px" : size === "xl" ? "18px" : "13px" }}>{displayConnection}%</span>
         </div>
         {showCost && connectionCost !== undefined && (
-          <div className="text-yellow-400 font-bold" style={{ fontSize: "9px" }}>
-            ⚡{connectionCost}
+          <div className="flex flex-col items-center justify-center px-1 border-x border-gray-800">
+            <span className="text-yellow-400 font-bold" style={{ fontSize: "9px" }}>⚡{connectionCost}</span>
           </div>
         )}
-        <div className="flex items-center gap-0.5">
-          <span className="text-green-400" style={{ fontSize: "9px" }}>♥</span>
-          <span className={`font-bold ${displayHealth <= 2 ? "text-red-400" : "text-white"}`} style={{ fontSize: size === "sm" ? "10px" : size === "xl" ? "18px" : "13px" }}>
-            {displayHealth}
+        <div className="w-px bg-gray-800 self-stretch" />
+        <div className="flex-1 flex flex-col items-center justify-center py-1">
+          <span className="text-blue-400 font-bold tracking-widest uppercase" style={{ fontSize: "10px" }}>DEF</span>
+          <span className={`font-bold leading-none ${displayDef <= 2 ? "text-red-400" : "text-white"}`} style={{ fontSize: size === "sm" ? "14px" : size === "xl" ? "24px" : "17px" }}>
+            {displayDef}
           </span>
         </div>
       </div>

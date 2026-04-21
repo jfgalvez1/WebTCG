@@ -6,7 +6,8 @@ export interface CardInstance {
   url: string;
   rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
   baseAttack: number;
-  baseHealth: number;
+  baseDef: number;
+  baseConnection: number;
   factions: string[];
   currentHealth?: number;
   isTapped?: boolean;
@@ -42,8 +43,8 @@ interface GameState {
   resetGame: () => void;
 }
 
-function calcConnectionCost(attack: number, health: number): number {
-  return Math.max(1, Math.round((attack + health) / 3));
+function calcConnectionCost(attack: number, def: number): number {
+  return Math.max(1, Math.round((attack + def) / 3));
 }
 
 function createOpponentDeck(): BattlefieldCard[] {
@@ -59,7 +60,8 @@ function createOpponentDeck(): BattlefieldCard[] {
     url: d.url,
     rarity: "COMMON" as const,
     baseAttack: d.attack,
-    baseHealth: d.health,
+    baseDef: d.health,
+    baseConnection: 30,
     factions: d.factions,
     currentHealth: d.health,
     isTapped: false,
@@ -108,12 +110,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     const card = state.playerHand.find((c) => c.instanceId === instanceId);
     if (!card) return;
 
-    const cost = calcConnectionCost(card.baseAttack, card.baseHealth);
+    const cost = calcConnectionCost(card.baseAttack, card.baseDef);
     if (state.playerConnections < cost) return;
 
     const boardCard: BattlefieldCard = {
       ...card,
-      currentHealth: card.baseHealth,
+      currentHealth: card.baseDef,
       isTapped: false,
       position: "player",
     };

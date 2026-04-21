@@ -12,7 +12,8 @@ interface InventoryItem {
   dateAcquired: string;
   card: {
     baseAttack: number;
-    baseHealth: number;
+    baseDef: number;
+    baseConnection: number;
     factions: string[];
     rawMetadata: {
       monthlyVisits?: number;
@@ -68,7 +69,8 @@ export default function InventoryPage() {
       url: item.url,
       rarity: item.rarity,
       baseAttack: item.card.baseAttack,
-      baseHealth: item.card.baseHealth,
+      baseDef: item.card.baseDef,
+      baseConnection: item.card.baseConnection,
       factions: item.card.factions,
       dateAcquired: item.dateAcquired,
     };
@@ -202,8 +204,9 @@ export default function InventoryPage() {
                 <tr className="text-gray-600 uppercase tracking-widest border-b border-gray-800 bg-gray-900/50">
                   <th className="px-4 py-3 text-left">Domain</th>
                   <th className="px-4 py-3 text-left">Rarity</th>
-                  <th className="px-4 py-3 text-center">⚔</th>
-                  <th className="px-4 py-3 text-center">♥</th>
+                  <th className="px-4 py-3 text-center">ATK</th>
+                  <th className="px-4 py-3 text-center">CONN</th>
+                  <th className="px-4 py-3 text-center">DEF</th>
                   <th className="px-4 py-3 text-left">Factions</th>
                   <th className="px-4 py-3 text-left">Acquired</th>
                 </tr>
@@ -225,7 +228,8 @@ export default function InventoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-center text-red-400 font-bold">{item.card.baseAttack}</td>
-                    <td className="px-4 py-2 text-center text-green-400 font-bold">{item.card.baseHealth}</td>
+                    <td className="px-4 py-2 text-center text-green-400 font-bold">{item.card.baseConnection}%</td>
+                    <td className="px-4 py-2 text-center text-blue-400 font-bold">{item.card.baseDef}</td>
                     <td className="px-4 py-2 text-gray-500">{item.card.factions.join(", ")}</td>
                     <td className="px-4 py-2 text-gray-600">
                       {new Date(item.dateAcquired).toLocaleDateString()}
@@ -329,13 +333,13 @@ export default function InventoryPage() {
                     <div className="text-red-400 font-bold text-2xl">⚔ {selectedItem.card.baseAttack}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Health</div>
-                    <div className="text-green-400 font-bold text-2xl">♥ {selectedItem.card.baseHealth}</div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Def</div>
+                    <div className="text-blue-400 font-bold text-2xl">🛡 {selectedItem.card.baseDef}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Cost</div>
-                    <div className="text-yellow-400 font-bold text-2xl">
-                      ⚡{Math.max(1, Math.round((selectedItem.card.baseAttack + selectedItem.card.baseHealth) / 3))}
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Connection</div>
+                    <div className="text-green-400 font-bold text-2xl">
+                      ⚡{selectedItem.card.baseConnection}%
                     </div>
                   </div>
                 </div>

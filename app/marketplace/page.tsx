@@ -9,7 +9,8 @@ import { CardInstance } from "@/store/gameStore";
 
 interface CardData {
   baseAttack: number;
-  baseHealth: number;
+  baseDef: number;
+  baseConnection: number;
   factions: string[];
   rawMetadata: {
     monthlyVisits?: number;
@@ -66,7 +67,8 @@ function toCardInstance(item: { instanceId: string; url: string; rarity: "GENESI
     url: item.url,
     rarity: item.rarity,
     baseAttack: item.card.baseAttack,
-    baseHealth: item.card.baseHealth,
+    baseDef: item.card.baseDef,
+    baseConnection: item.card.baseConnection,
     factions: item.card.factions,
     dateAcquired: item.dateAcquired,
   };
@@ -474,8 +476,12 @@ export default function MarketplacePage() {
                   <div className="text-red-400 font-bold text-xl">⚔ {selectedListing.inventory.card.baseAttack}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Health</div>
-                  <div className="text-green-400 font-bold text-xl">♥ {selectedListing.inventory.card.baseHealth}</div>
+                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Def</div>
+                  <div className="text-blue-400 font-bold text-xl">🛡 {selectedListing.inventory.card.baseDef}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Connection</div>
+                  <div className="text-green-400 font-bold text-xl">⚡{selectedListing.inventory.card.baseConnection}%</div>
                 </div>
               </div>
 

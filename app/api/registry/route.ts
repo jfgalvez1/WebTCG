@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
         card: {
           select: {
             baseAttack: true,
-            baseHealth: true,
+            baseDef: true,
+            baseConnection: true,
             factions: true,
             genesisMinted: true,
             createdAt: true,

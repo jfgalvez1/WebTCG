@@ -58,7 +58,8 @@ export async function POST() {
             create: {
               url: card.url,
               baseAttack: card.baseAttack,
-              baseHealth: card.baseHealth,
+              baseDef: card.baseDef,
+              baseConnection: card.baseConnection,
               factions: card.factions,
               genesisMinted: true,
               rawMetadata: card.rawMetadata as object,

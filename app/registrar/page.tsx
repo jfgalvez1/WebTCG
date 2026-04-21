@@ -8,7 +8,8 @@ import { CardInstance } from "@/store/gameStore";
 interface ForgedCard {
   url: string;
   baseAttack: number;
-  baseHealth: number;
+  baseDef: number;
+  baseConnection: number;
   factions: string[];
   genesisMinted: boolean;
   mintCost: number;
@@ -76,7 +77,8 @@ export default function RegistrarPage() {
         url: forged.url,
         rarity: "GENESIS",
         baseAttack: forged.baseAttack,
-        baseHealth: forged.baseHealth,
+        baseDef: forged.baseDef,
+        baseConnection: forged.baseConnection,
         factions: forged.factions,
         dateAcquired: new Date().toISOString(),
       }
@@ -140,7 +142,8 @@ export default function RegistrarPage() {
                 <div className="space-y-2 text-xs">
                   <Row label="Domain" value={forged.url} color="text-cyan-400" />
                   <Row label="Base Attack" value={`${forged.baseAttack} ⚔`} color="text-red-400" />
-                  <Row label="Base Health" value={`${forged.baseHealth} ♥`} color="text-green-400" />
+                  <Row label="Base Def" value={`${forged.baseDef} 🛡`} color="text-blue-400" />
+                  <Row label="Connection" value={`${forged.baseConnection}%`} color="text-green-400" />
                   <Row label="Factions" value={forged.factions.join(", ")} color="text-purple-400" />
                   <Row
                     label="Ownership"

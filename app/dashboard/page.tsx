@@ -18,7 +18,8 @@ interface InventoryItem {
   dateAcquired: string;
   card: {
     baseAttack: number;
-    baseHealth: number;
+    baseDef: number;
+    baseConnection: number;
     factions: string[];
   };
 }
@@ -147,7 +148,8 @@ export default function DashboardPage() {
                     <th className="pb-2 text-left">URL</th>
                     <th className="pb-2 text-left">Rarity</th>
                     <th className="pb-2 text-center">⚔ ATK</th>
-                    <th className="pb-2 text-center">♥ HP</th>
+                    <th className="pb-2 text-center">CONN</th>
+                    <th className="pb-2 text-center">🛡 DEF</th>
                     <th className="pb-2 text-left">Factions</th>
                   </tr>
                 </thead>

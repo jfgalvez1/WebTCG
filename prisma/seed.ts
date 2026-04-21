@@ -24,11 +24,11 @@ async function main() {
 
   // Pre-populate some cards in the global dictionary
   const seedCards = [
-    { url: "google.com", baseAttack: 8, baseHealth: 52, factions: ["Tech"], genesisMinted: false },
-    { url: "github.com", baseAttack: 5, baseHealth: 32, factions: ["Tech"], genesisMinted: false },
-    { url: "reddit.com", baseAttack: 5, baseHealth: 38, factions: ["Social", "Media"], genesisMinted: false },
-    { url: "twitch.tv", baseAttack: 5, baseHealth: 26, factions: ["Gaming", "Social"], genesisMinted: false },
-    { url: "wikipedia.org", baseAttack: 5, baseHealth: 46, factions: ["Education"], genesisMinted: false },
+    { url: "google.com", baseAttack: 8, baseDef: 52, baseConnection: 65, factions: ["Tech"], genesisMinted: false },
+    { url: "github.com", baseAttack: 5, baseDef: 32, baseConnection: 60, factions: ["Tech"], genesisMinted: false },
+    { url: "reddit.com", baseAttack: 5, baseDef: 38, baseConnection: 67, factions: ["Social", "Media"], genesisMinted: false },
+    { url: "twitch.tv", baseAttack: 5, baseDef: 26, baseConnection: 67, factions: ["Gaming", "Social"], genesisMinted: false },
+    { url: "wikipedia.org", baseAttack: 5, baseDef: 46, baseConnection: 55, factions: ["Education"], genesisMinted: false },
   ];
 
   for (const card of seedCards) {

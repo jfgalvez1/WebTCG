@@ -57,14 +57,15 @@ model VerificationToken {
 }
 
 model CardGlobal {
-  url           String          @id
-  baseAttack    Int
-  baseHealth    Int
-  factions      String[]
-  genesisMinted Boolean         @default(false)
-  rawMetadata   Json?
-  createdAt     DateTime        @default(now())
-  inventory     UserInventory[]
+  url            String          @id
+  baseAttack     Int
+  baseDef        Int
+  baseConnection Int             @default(30)
+  factions       String[]
+  genesisMinted  Boolean         @default(false)
+  rawMetadata    Json?
+  createdAt      DateTime        @default(now())
+  inventory      UserInventory[]
 }
 
 enum CardRarity {

@@ -37,7 +37,8 @@ export default function BoosterPage() {
       url: c.url as string,
       rarity: "COMMON" as const,
       baseAttack: c.baseAttack as number,
-      baseHealth: c.baseHealth as number,
+      baseDef: c.baseDef as number,
+      baseConnection: c.baseConnection as number,
       factions: c.factions as string[],
       dateAcquired: new Date().toISOString(),
     }));
@@ -160,7 +161,7 @@ export default function BoosterPage() {
                       <div key={i} className="text-xs border border-gray-800 bg-gray-900/50 rounded px-3 py-2">
                         <div className="text-cyan-400">{card.url}</div>
                         <div className="text-gray-500">
-                          ⚔ {card.baseAttack} / ♥ {card.baseHealth}
+                          ⚔ {card.baseAttack} / 🛡 {card.baseDef} / ⚡ {card.baseConnection}%
                         </div>
                       </div>
                     ))}
