@@ -43,49 +43,64 @@ export async function POST() {
 
     const cards = await Promise.all(selected.map(forgeDomain));
 
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { standardCoins: { decrement: BOOSTER_COST } },
-      });
-
-      const instances = await Promise.all(
-        cards.map(async (card) => {
-          // Upsert into global dictionary
-          await tx.cardGlobal.upsert({
-            where: { url: card.url },
-            update: {},
-            create: {
-              url: card.url,
-              baseAttack: card.baseAttack,
-              baseDef: card.baseDef,
-              baseConnection: card.baseConnection,
-              factions: card.factions,
-              genesisMinted: true,
-              rawMetadata: card.rawMetadata as object,
-            },
-          });
-
-          return tx.userInventory.create({
-            data: { ownerId: user.id, url: card.url, rarity: "COMMON" },
-          });
-        })
-      );
-
-      return instances;
+    // Deduct coins first, then create cards sequentially to avoid pooler issues
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { standardCoins: { decrement: BOOSTER_COST } },
     });
 
-    // Return full card data
-    const fullCards = await Promise.all(
-      result.map(async (inst) => {
-        const cardData = await forgeDomain(inst.url);
-        return { ...inst, ...cardData };
-      })
-    );
+    const instances: Array<{ instanceId: string; url: string; ownerId: string; rarity: string }> = [];
+
+    for (const card of cards) {
+      try {
+        await prisma.cardGlobal.upsert({
+          where: { url: card.url },
+          update: {},
+          create: {
+            url: card.url,
+            baseAttack: card.baseAttack,
+            baseDef: card.baseDef,
+            baseConnection: card.baseConnection,
+            factions: card.factions,
+            genesisMinted: true,
+            rawMetadata: card.rawMetadata as object,
+          },
+        });
+
+        const inv = await prisma.userInventory.create({
+          data: { ownerId: user.id, url: card.url, rarity: "COMMON" },
+        });
+
+        instances.push({ ...inv, rarity: inv.rarity as string });
+      } catch (cardErr) {
+        // Skip cards that were claimed mid-request (race condition)
+        console.warn(`Skipped ${card.url}: already claimed`);
+      }
+    }
+
+    if (instances.length === 0) {
+      // Refund coins if no cards were added
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { standardCoins: { increment: BOOSTER_COST } },
+      });
+      return NextResponse.json(
+        { error: "All selected cards were claimed by another player. Try again." },
+        { status: 409 }
+      );
+    }
+
+    // Build full card response using already-forged data
+    const cardMap = new Map(cards.map((c) => [c.url, c]));
+    const fullCards = instances.map((inst) => ({
+      ...inst,
+      ...(cardMap.get(inst.url) ?? {}),
+    }));
 
     return NextResponse.json({ cards: fullCards });
   } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Failed to open booster pack." }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[booster] Error:", message);
+    return NextResponse.json({ error: `Failed to open booster pack: ${message}` }, { status: 500 });
   }
 }
