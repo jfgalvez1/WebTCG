@@ -350,9 +350,9 @@ export default function MarketplacePage() {
 
             {(standardCoins !== null || premiumCoins !== null) && (
               <div className="mb-5 flex gap-5 text-xs font-mono text-gray-500">
-                <span>Balance: <span className="text-yellow-400 font-bold">{standardCoins ?? 0} ◎</span> standard</span>
+                <span>Balance: <span className="text-cyan-400 font-bold">{standardCoins ?? 0} ◈</span> standard</span>
                 <span className="text-gray-700">·</span>
-                <span><span className="text-violet-400 font-bold">{premiumCoins ?? 0} ◆</span> premium</span>
+                <span><span className="text-yellow-400 font-bold">{premiumCoins ?? 0} ⊕</span> premium</span>
               </div>
             )}
 
@@ -412,8 +412,8 @@ export default function MarketplacePage() {
                           className="appearance-none bg-black/60 border border-gray-700 border-r-0 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-emerald-700 transition-colors cursor-pointer pr-6"
                           title="Select coin type"
                         >
-                          <option value="STANDARD">◎</option>
-                          <option value="PREMIUM">◆</option>
+                          <option value="STANDARD">◈</option>
+                          <option value="PREMIUM">⊕</option>
                         </select>
                         <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-gray-600 text-[8px]">▾</span>
                       </div>
@@ -435,8 +435,8 @@ export default function MarketplacePage() {
                       >
                         {listing ? "Listing..." : "List for Sale"}
                       </button>
-                      <span className={`text-[10px] font-mono text-center ${listCoinType === "PREMIUM" ? "text-violet-400" : "text-yellow-600"}`}>
-                        {listCoinType === "PREMIUM" ? "◆ premium coins" : "◎ standard coins"}
+                      <span className={`text-[10px] font-mono text-center ${listCoinType === "PREMIUM" ? "text-yellow-400" : "text-cyan-600"}`}>
+                        {listCoinType === "PREMIUM" ? "⊕ premium coins" : "◈ standard coins"}
                       </span>
                     </div>
 
@@ -529,11 +529,11 @@ export default function MarketplacePage() {
               <div className="mt-2 border-t border-gray-800 pt-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-500 uppercase tracking-widest text-[10px]">Price</span>
-                  <span className={`font-bold text-2xl ${selectedListing.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
-                    {selectedListing.coinType === "PREMIUM" ? "◆" : "◎"} {selectedListing.price.toLocaleString()}
+                  <span className={`font-bold text-2xl ${selectedListing.coinType === "PREMIUM" ? "text-yellow-400" : "text-cyan-400"}`}>
+                    {selectedListing.coinType === "PREMIUM" ? "⊕" : "◈"} {selectedListing.price.toLocaleString()}
                   </span>
                 </div>
-                <div className={`text-right text-[10px] font-mono mb-3 ${selectedListing.coinType === "PREMIUM" ? "text-violet-600" : "text-yellow-700"}`}>
+                <div className={`text-right text-[10px] font-mono mb-3 ${selectedListing.coinType === "PREMIUM" ? "text-yellow-600" : "text-cyan-700"}`}>
                   {selectedListing.coinType === "PREMIUM" ? "premium coins" : "standard coins"}
                 </div>
 
@@ -553,7 +553,7 @@ export default function MarketplacePage() {
                     disabled={buying}
                     className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white font-mono font-bold text-sm rounded-lg transition-colors"
                   >
-                    {buying ? "Purchasing..." : `Buy for ${selectedListing.price} ${selectedListing.coinType === "PREMIUM" ? "◆ premium" : "◎ standard"}`}
+                    {buying ? "Purchasing..." : `Buy for ${selectedListing.price} ${selectedListing.coinType === "PREMIUM" ? "⊕ premium" : "◈ standard"}`}
                   </button>
                 )}
               </div>
@@ -605,8 +605,8 @@ function ListingCard({
 
       {/* Price */}
       <div className="flex items-center justify-between border-t border-gray-800 pt-2">
-        <span className={`font-bold text-base ${listing.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
-          {listing.coinType === "PREMIUM" ? "◆" : "◎"} {listing.price.toLocaleString()}
+        <span className={`font-bold text-base ${listing.coinType === "PREMIUM" ? "text-yellow-400" : "text-cyan-400"}`}>
+          {listing.coinType === "PREMIUM" ? "⊕" : "◈"} {listing.price.toLocaleString()}
         </span>
         <span className="text-[10px] font-mono text-emerald-500 group-hover:text-emerald-400 transition-colors">
           BUY →
@@ -659,8 +659,8 @@ function OwnCard({
             {RARITY_ICONS[item.rarity]} {item.rarity}
           </span>
           {isListed && (
-            <span className={`text-[10px] font-bold ${item.listing!.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
-              {item.listing!.coinType === "PREMIUM" ? "◆" : "◎"} {item.listing!.price}
+            <span className={`text-[10px] font-bold ${item.listing!.coinType === "PREMIUM" ? "text-yellow-400" : "text-cyan-400"}`}>
+              {item.listing!.coinType === "PREMIUM" ? "⊕" : "◈"} {item.listing!.price}
             </span>
           )}
         </div>
