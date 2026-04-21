@@ -7,6 +7,25 @@ import { CardInstance } from "@/store/gameStore";
 
 interface BoosterCard extends CardInstance {
   instanceId: string;
+  rawMetadata?: {
+    monthlyVisits?: number;
+    ageInYears?: number;
+    source?: string;
+  };
+}
+
+const RARITY_COLORS = {
+  GENESIS: "text-yellow-400",
+  COMMON: "text-cyan-400",
+  DEAD_LINK: "text-red-400",
+};
+const RARITY_ICONS = { GENESIS: "◈", COMMON: "◇", DEAD_LINK: "✕" };
+
+function formatVisits(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toString();
 }
 
 export default function BoosterPage() {
@@ -15,6 +34,7 @@ export default function BoosterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [opened, setOpened] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<BoosterCard | null>(null);
 
   async function openPack() {
     setError("");
@@ -41,6 +61,7 @@ export default function BoosterPage() {
       baseConnection: c.baseConnection as number,
       factions: c.factions as string[],
       dateAcquired: new Date().toISOString(),
+      rawMetadata: c.rawMetadata as BoosterCard["rawMetadata"],
     }));
 
     setCards(fullCards);
@@ -139,11 +160,13 @@ export default function BoosterPage() {
                           next[i] = true;
                           return next;
                         });
+                      } else {
+                        setSelectedCard(card);
                       }
                     }}
                   >
                     {revealed[i] ? (
-                      <div className="card-reveal">
+                      <div className="card-reveal hover:scale-105 transition-transform">
                         <Card card={card} size="md" />
                       </div>
                     ) : (
@@ -183,6 +206,127 @@ export default function BoosterPage() {
         {error && (
           <div className="text-red-400 text-xs border border-red-900/50 bg-red-950/30 px-4 py-3 rounded">
             ✕ {error}
+          </div>
+        )}
+
+        {/* ── Card detail modal ──────────────────────────────────────────── */}
+        {selectedCard && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedCard(null)}
+          >
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <div
+              className="relative z-10 flex flex-col sm:flex-row gap-10 items-center sm:items-start bg-gray-950 border border-gray-700 rounded-2xl shadow-2xl p-10 max-w-2xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close */}
+              <button
+                onClick={() => setSelectedCard(null)}
+                className="absolute top-4 right-4 text-gray-600 hover:text-white text-xl transition-colors"
+              >
+                ✕
+              </button>
+
+              {/* Card — click to visit site */}
+              <div className="shrink-0 flex flex-col items-center gap-2">
+                <a
+                  href={`https://${selectedCard.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative block"
+                  title={`Visit ${selectedCard.url}`}
+                >
+                  <Card card={selectedCard} size="xl" />
+                  <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center pointer-events-none">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-mono tracking-widest border border-white/40 bg-black/60 px-3 py-1.5 rounded-lg">
+                      ↗ VISIT SITE
+                    </span>
+                  </div>
+                </a>
+                <span className="text-gray-600 text-[10px] font-mono">click card to visit site</span>
+              </div>
+
+              {/* Details */}
+              <div className="flex flex-col gap-4 text-xs font-mono min-w-0 flex-1">
+                {/* Just acquired badge */}
+                <div className="border border-cyan-900/50 bg-cyan-950/20 rounded-lg px-4 py-3">
+                  <div className="text-gray-500 uppercase tracking-widest text-[10px] mb-1">Status</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-400 text-base">◈</span>
+                    <span className="text-cyan-300 font-bold text-sm">Just Acquired</span>
+                  </div>
+                </div>
+
+                {/* Website stats */}
+                {selectedCard.rawMetadata && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {selectedCard.rawMetadata.monthlyVisits !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Monthly Visits</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {formatVisits(selectedCard.rawMetadata.monthlyVisits)}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">visits / mo</div>
+                      </div>
+                    )}
+                    {selectedCard.rawMetadata.ageInYears !== undefined && (
+                      <div className="border border-gray-800 bg-gray-900/60 rounded-lg px-3 py-2.5">
+                        <div className="text-gray-500 uppercase tracking-widest text-[9px] mb-1">Domain Age</div>
+                        <div className="text-white font-bold text-lg leading-none">
+                          {selectedCard.rawMetadata.ageInYears}
+                        </div>
+                        <div className="text-gray-600 text-[9px] mt-0.5">years online</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Rarity */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Rarity</div>
+                  <div className={`font-bold text-sm ${RARITY_COLORS[selectedCard.rarity]}`}>
+                    {RARITY_ICONS[selectedCard.rarity]} {selectedCard.rarity}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex gap-6">
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Attack</div>
+                    <div className="text-red-400 font-bold text-2xl">⚔ {selectedCard.baseAttack}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Defense</div>
+                    <div className="text-blue-400 font-bold text-2xl">🛡 {selectedCard.baseDef}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">CONN</div>
+                    <div className="text-green-400 font-bold text-2xl">⚡{selectedCard.baseConnection}</div>
+                  </div>
+                </div>
+
+                {/* Factions */}
+                {selectedCard.factions.length > 0 && (
+                  <div>
+                    <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-2">Factions</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedCard.factions.map((f) => (
+                        <span key={f} className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 bg-gray-900/60">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Instance ID */}
+                <div>
+                  <div className="text-gray-600 uppercase tracking-widest text-[10px] mb-1">Instance ID</div>
+                  <div className="text-gray-600 break-all text-[10px]">{selectedCard.instanceId}</div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
