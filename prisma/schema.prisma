@@ -85,11 +85,17 @@ model UserInventory {
   listing      Listing?
 }
 
+enum CoinType {
+  STANDARD
+  PREMIUM
+}
+
 model Listing {
   id          String        @id @default(cuid())
   sellerId    String
   instanceId  String        @unique
   price       Int
+  coinType    CoinType      @default(STANDARD)
   createdAt   DateTime      @default(now())
   seller      User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   inventory   UserInventory @relation(fields: [instanceId], references: [instanceId], onDelete: Cascade)

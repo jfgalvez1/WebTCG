@@ -13,7 +13,7 @@ export async function GET() {
       where: { ownerId: session.user.id },
       include: {
         card: true,
-        listing: { select: { id: true, price: true } },
+        listing: { select: { id: true, price: true, coinType: true } },
       },
       orderBy: { dateAcquired: "desc" },
     });

@@ -42,10 +42,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { instanceId, price } = body as { instanceId?: string; price?: number };
+  const { instanceId, price, coinType } = body as {
+    instanceId?: string;
+    price?: number;
+    coinType?: "STANDARD" | "PREMIUM";
+  };
 
   if (!instanceId || typeof price !== "number" || price < 1) {
     return NextResponse.json({ error: "instanceId and price (≥1) required" }, { status: 400 });
+  }
+  if (coinType && coinType !== "STANDARD" && coinType !== "PREMIUM") {
+    return NextResponse.json({ error: "coinType must be STANDARD or PREMIUM" }, { status: 400 });
   }
 
   // Confirm the card belongs to this user
@@ -69,6 +76,7 @@ export async function POST(req: NextRequest) {
       sellerId: session.user.id,
       instanceId,
       price,
+      coinType: coinType ?? "STANDARD",
     },
     include: {
       seller: { select: { id: true, username: true } },

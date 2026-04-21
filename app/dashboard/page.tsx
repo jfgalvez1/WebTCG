@@ -161,7 +161,8 @@ export default function DashboardPage() {
                         {item.rarity}
                       </td>
                       <td className="py-2 text-center text-red-400 font-bold">{item.card.baseAttack}</td>
-                      <td className="py-2 text-center text-green-400 font-bold">{item.card.baseHealth}</td>
+                      <td className="py-2 text-center text-green-400 font-bold">{item.card.baseConnection}%</td>
+                      <td className="py-2 text-center text-blue-400 font-bold">{item.card.baseDef}</td>
                       <td className="py-2 text-gray-500">{item.card.factions.join(", ")}</td>
                     </tr>
                   ))}

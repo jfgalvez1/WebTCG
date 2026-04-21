@@ -18,9 +18,12 @@ interface CardData {
   } | null;
 }
 
+type CoinType = "STANDARD" | "PREMIUM";
+
 interface ListingItem {
   id: string;
   price: number;
+  coinType: CoinType;
   createdAt: string;
   sellerId: string;
   seller: { id: string; username: string };
@@ -39,7 +42,7 @@ interface OwnInventoryItem {
   rarity: "GENESIS" | "COMMON" | "DEAD_LINK";
   dateAcquired: string;
   card: CardData;
-  listing: { id: string; price: number } | null;
+  listing: { id: string; price: number; coinType: CoinType } | null;
 }
 
 type Tab = "browse" | "sell";
@@ -93,9 +96,11 @@ export default function MarketplacePage() {
   // Sell state
   const [ownInventory, setOwnInventory] = useState<OwnInventoryItem[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
-  const [coins, setCoins] = useState<number | null>(null);
+  const [standardCoins, setStandardCoins] = useState<number | null>(null);
+  const [premiumCoins, setPremiumCoins] = useState<number | null>(null);
   const [selectedForSale, setSelectedForSale] = useState<OwnInventoryItem | null>(null);
   const [listPrice, setListPrice] = useState("");
+  const [listCoinType, setListCoinType] = useState<CoinType>("STANDARD");
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState("");
   const [listSuccess, setListSuccess] = useState("");
@@ -123,7 +128,8 @@ export default function MarketplacePage() {
     const res = await fetch("/api/inventory");
     const data = await res.json();
     setMyId(data.user?.id ?? null);
-    setCoins(data.user?.standardCoins ?? null);
+    setStandardCoins(data.user?.standardCoins ?? null);
+    setPremiumCoins(data.user?.premiumCoins ?? null);
 
     // Merge inventory with listing info
     const invItems: OwnInventoryItem[] = (data.inventory ?? []).map(
@@ -179,16 +185,18 @@ export default function MarketplacePage() {
     const res = await fetch("/api/marketplace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ instanceId: selectedForSale.instanceId, price }),
+      body: JSON.stringify({ instanceId: selectedForSale.instanceId, price, coinType: listCoinType }),
     });
     const data = await res.json();
     setListing(false);
     if (!res.ok) {
       setListError(data.error ?? "Failed to list card");
     } else {
-      setListSuccess(`${selectedForSale.url} listed for ${price} coins!`);
+      const coinLabel = listCoinType === "PREMIUM" ? "premium coins" : "standard coins";
+      setListSuccess(`${selectedForSale.url} listed for ${price} ${coinLabel}!`);
       setSelectedForSale(null);
       setListPrice("");
+      setListCoinType("STANDARD");
       fetchOwnInventory();
     }
   }
@@ -340,9 +348,11 @@ export default function MarketplacePage() {
               </div>
             )}
 
-            {coins !== null && (
-              <div className="mb-5 text-xs font-mono text-gray-500">
-                Your balance: <span className="text-yellow-400 font-bold">{coins} ◎</span> standard coins
+            {(standardCoins !== null || premiumCoins !== null) && (
+              <div className="mb-5 flex gap-5 text-xs font-mono text-gray-500">
+                <span>Balance: <span className="text-yellow-400 font-bold">{standardCoins ?? 0} ◎</span> standard</span>
+                <span className="text-gray-700">·</span>
+                <span><span className="text-violet-400 font-bold">{premiumCoins ?? 0} ◆</span> premium</span>
               </div>
             )}
 
@@ -393,25 +403,42 @@ export default function MarketplacePage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-yellow-600 text-xs">◎</span>
+                    <div className="relative flex items-stretch">
+                      {/* Coin-type dropdown trigger */}
+                      <div className="relative">
+                        <select
+                          value={listCoinType}
+                          onChange={(e) => setListCoinType(e.target.value as CoinType)}
+                          className="appearance-none bg-black/60 border border-gray-700 border-r-0 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-emerald-700 transition-colors cursor-pointer pr-6"
+                          title="Select coin type"
+                        >
+                          <option value="STANDARD">◎</option>
+                          <option value="PREMIUM">◆</option>
+                        </select>
+                        <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-gray-600 text-[8px]">▾</span>
+                      </div>
                       <input
                         type="number"
                         min={1}
                         value={listPrice}
                         onChange={(e) => setListPrice(e.target.value)}
-                        placeholder="Price in coins"
-                        className="bg-black/60 border border-gray-700 focus:border-emerald-700 rounded pl-8 pr-4 py-2 text-sm text-white focus:outline-none w-44 transition-colors"
+                        placeholder={listCoinType === "PREMIUM" ? "Price in premium" : "Price in standard"}
+                        className="bg-black/60 border border-gray-700 focus:border-emerald-700 rounded-r pr-4 pl-3 py-2 text-sm text-white focus:outline-none w-44 transition-colors"
                       />
                     </div>
 
-                    <button
-                      onClick={handleList}
-                      disabled={listing}
-                      className="px-5 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-mono rounded transition-colors"
-                    >
-                      {listing ? "Listing..." : "List for Sale"}
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={handleList}
+                        disabled={listing}
+                        className="px-5 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-mono rounded transition-colors"
+                      >
+                        {listing ? "Listing..." : "List for Sale"}
+                      </button>
+                      <span className={`text-[10px] font-mono text-center ${listCoinType === "PREMIUM" ? "text-violet-400" : "text-yellow-600"}`}>
+                        {listCoinType === "PREMIUM" ? "◆ premium coins" : "◎ standard coins"}
+                      </span>
+                    </div>
 
                     <button
                       onClick={() => setSelectedForSale(null)}
@@ -500,9 +527,14 @@ export default function MarketplacePage() {
 
               {/* Price + buy */}
               <div className="mt-2 border-t border-gray-800 pt-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-gray-500 uppercase tracking-widest text-[10px]">Price</span>
-                  <span className="text-yellow-400 font-bold text-2xl">◎ {selectedListing.price.toLocaleString()}</span>
+                  <span className={`font-bold text-2xl ${selectedListing.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
+                    {selectedListing.coinType === "PREMIUM" ? "◆" : "◎"} {selectedListing.price.toLocaleString()}
+                  </span>
+                </div>
+                <div className={`text-right text-[10px] font-mono mb-3 ${selectedListing.coinType === "PREMIUM" ? "text-violet-600" : "text-yellow-700"}`}>
+                  {selectedListing.coinType === "PREMIUM" ? "premium coins" : "standard coins"}
                 </div>
 
                 {buyError && (
@@ -521,7 +553,7 @@ export default function MarketplacePage() {
                     disabled={buying}
                     className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white font-mono font-bold text-sm rounded-lg transition-colors"
                   >
-                    {buying ? "Purchasing..." : `Buy for ${selectedListing.price} coins`}
+                    {buying ? "Purchasing..." : `Buy for ${selectedListing.price} ${selectedListing.coinType === "PREMIUM" ? "◆ premium" : "◎ standard"}`}
                   </button>
                 )}
               </div>
@@ -573,7 +605,9 @@ function ListingCard({
 
       {/* Price */}
       <div className="flex items-center justify-between border-t border-gray-800 pt-2">
-        <span className="text-yellow-400 font-bold text-base">◎ {listing.price.toLocaleString()}</span>
+        <span className={`font-bold text-base ${listing.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
+          {listing.coinType === "PREMIUM" ? "◆" : "◎"} {listing.price.toLocaleString()}
+        </span>
         <span className="text-[10px] font-mono text-emerald-500 group-hover:text-emerald-400 transition-colors">
           BUY →
         </span>
@@ -625,7 +659,9 @@ function OwnCard({
             {RARITY_ICONS[item.rarity]} {item.rarity}
           </span>
           {isListed && (
-            <span className="text-yellow-400 text-[10px] font-bold">◎ {item.listing!.price}</span>
+            <span className={`text-[10px] font-bold ${item.listing!.coinType === "PREMIUM" ? "text-violet-400" : "text-yellow-400"}`}>
+              {item.listing!.coinType === "PREMIUM" ? "◆" : "◎"} {item.listing!.price}
+            </span>
           )}
         </div>
       </div>

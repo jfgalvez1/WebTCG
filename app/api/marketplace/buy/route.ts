@@ -30,24 +30,30 @@ export async function POST(req: NextRequest) {
   if (!buyer) {
     return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
   }
-  if (buyer.standardCoins < listing.price) {
+
+  const isPremium = listing.coinType === "PREMIUM";
+  const buyerBalance = isPremium ? buyer.premiumCoins : buyer.standardCoins;
+  const coinLabel = isPremium ? "premium coins" : "standard coins";
+  if (buyerBalance < listing.price) {
     return NextResponse.json(
-      { error: `Not enough coins. Need ${listing.price}, have ${buyer.standardCoins}` },
+      { error: `Not enough ${coinLabel}. Need ${listing.price}, have ${buyerBalance}` },
       { status: 402 }
     );
   }
+
+  const coinField = isPremium ? "premiumCoins" : "standardCoins";
 
   // Atomic transaction: deduct buyer coins, credit seller coins, transfer card, delete listing
   await prisma.$transaction([
     // Deduct from buyer
     prisma.user.update({
       where: { id: session.user.id },
-      data: { standardCoins: { decrement: listing.price } },
+      data: { [coinField]: { decrement: listing.price } },
     }),
     // Credit seller
     prisma.user.update({
       where: { id: listing.sellerId },
-      data: { standardCoins: { increment: listing.price } },
+      data: { [coinField]: { increment: listing.price } },
     }),
     // Transfer card ownership
     prisma.userInventory.update({
