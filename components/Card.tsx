@@ -28,7 +28,14 @@ const FACTION_COLORS: Record<string, string> = {
 };
 
 interface CardProps {
-  card: CardInstance & { currentHealth?: number; isTapped?: boolean };
+  card: CardInstance & {
+    currentHealth?: number;
+    isTapped?: boolean;
+    isHub?: boolean;
+    isFirewall?: boolean;
+    isPopUp?: boolean;
+    bwDrain?: number;
+  };
   size?: "sm" | "md" | "lg" | "xl";
   selected?: boolean;
   onClick?: () => void;
@@ -46,6 +53,7 @@ export default function Card({
   connectionCost,
   showCost,
 }: CardProps) {
+  const { isHub, isFirewall, isPopUp, bwDrain } = card as CardProps["card"];
   const [imgError, setImgError] = useState(false);
   const [imgLoading, setImgLoading] = useState(true);
   const rarityStyle = RARITY_STYLES[card.rarity];
@@ -85,6 +93,26 @@ export default function Card({
         <div className="text-white font-bold truncate leading-tight" style={{ fontSize: size === "sm" ? "9px" : size === "xl" ? "15px" : "12px" }}>
           {card.url}
         </div>
+        {/* Ability badges */}
+        {(isFirewall || isPopUp || isHub) && (
+          <div className="flex gap-0.5 justify-center flex-wrap mt-0.5">
+            {isFirewall && (
+              <span className="bg-orange-900/80 border border-orange-700 text-orange-300 rounded px-1 leading-tight" style={{ fontSize: "7px" }}>
+                🛡 FIREWALL
+              </span>
+            )}
+            {isPopUp && (
+              <span className="bg-red-900/80 border border-red-700 text-red-300 rounded px-1 leading-tight animate-pulse" style={{ fontSize: "7px" }}>
+                ⚠ POP-UP -{bwDrain ?? 3}BW
+              </span>
+            )}
+            {isHub && (
+              <span className="bg-cyan-900/80 border border-cyan-700 text-cyan-300 rounded px-1 leading-tight" style={{ fontSize: "7px" }}>
+                HUB
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Art area */}
@@ -139,7 +167,7 @@ export default function Card({
         <div className="w-px bg-gray-800 self-stretch" />
         <div className="flex-1 flex flex-col items-center justify-center py-1">
           <span className="text-green-400 font-bold tracking-widest uppercase" style={{ fontSize: "10px" }}>CONN</span>
-          <span className="text-green-300 font-bold leading-none" style={{ fontSize: size === "sm" ? "11px" : size === "xl" ? "18px" : "13px" }}>{displayConnection}%</span>
+          <span className="text-green-300 font-bold leading-none" style={{ fontSize: size === "sm" ? "11px" : size === "xl" ? "18px" : "13px" }}>{displayConnection}</span>
         </div>
         {showCost && connectionCost !== undefined && (
           <div className="flex flex-col items-center justify-center px-1 border-x border-gray-800">

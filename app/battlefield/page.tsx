@@ -3,23 +3,99 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Card from "@/components/Card";
-import { CardBack } from "@/components/Card";
 import { useGameStore, CardInstance, BattlefieldCard } from "@/store/gameStore";
+
+// ── Phase metadata ────────────────────────────────────────────────────────────
+
+const PHASES = [
+  { id: "taskManager", label: "Task Manager", short: "TASK" },
+  { id: "refresh",     label: "Refresh",      short: "RFSH" },
+  { id: "browsing",    label: "Browsing",      short: "BRWS" },
+  { id: "execution",   label: "Execution",     short: "EXEC" },
+  { id: "cleanup",     label: "Cleanup",       short: "CLNP" },
+] as const;
+
+const AUTO_ADVANCE = new Set(["taskManager", "refresh", "cleanup"]);
+
+// ── BW bar helper ─────────────────────────────────────────────────────────────
+
+function BWBar({ bw, max = 100, label }: { bw: number; max?: number; label: string }) {
+  const pct = Math.max(0, Math.min(100, (bw / max) * 100));
+  const color = pct > 60 ? "bg-green-500" : pct > 30 ? "bg-yellow-500" : "bg-red-500";
+  return (
+    <div className="min-w-[140px]">
+      <div className="flex justify-between items-baseline mb-1">
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest">{label}</span>
+        <span className={`font-bold text-sm ${pct <= 30 ? "text-red-400" : pct <= 60 ? "text-yellow-400" : "text-green-400"}`}>
+          {bw} <span className="text-gray-600 font-normal text-xs">/ {max} BW</span>
+        </span>
+      </div>
+      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${color} rounded-full transition-all duration-500`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Phase step bar ────────────────────────────────────────────────────────────
+
+function PhaseBar({ phase }: { phase: string }) {
+  const activeIdx = PHASES.findIndex((p) => p.id === phase);
+  return (
+    <div className="flex items-center gap-0 text-[9px] font-mono uppercase tracking-widest">
+      {PHASES.map((p, i) => {
+        const isActive = p.id === phase;
+        const isPast = i < activeIdx;
+        return (
+          <div key={p.id} className="flex items-center">
+            <div
+              className={`px-2 py-0.5 rounded ${
+                isActive
+                  ? "bg-orange-700 text-orange-100 font-bold"
+                  : isPast
+                  ? "text-gray-700"
+                  : "text-gray-800"
+              }`}
+            >
+              {p.short}
+            </div>
+            {i < PHASES.length - 1 && (
+              <div className={`mx-0.5 ${isPast ? "text-gray-700" : "text-gray-900"}`}>›</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function BattlefieldPage() {
   const {
-    playerHP, opponentHP, playerConnections, maxConnections, turn,
-    phase, playerHand, playerBoard, opponentBoard, graveyard, selectedCard,
-    startGame, playCard, attackWithCard, endTurn, selectCard, resetGame,
+    playerBW, opponentBW, turn, phase,
+    playerCache, playerHand, playerBoard,
+    opponentBoard, browsingHistory, hyperlinks, selectedCard,
+    startGame, advancePhase, playCard, hyperlinkCard,
+    attackWithCard, selectCard, resetGame,
   } = useGameStore();
 
   const [inventory, setInventory] = useState<CardInstance[]>([]);
   const [loadingInv, setLoadingInv] = useState(false);
   const [attackMode, setAttackMode] = useState(false);
+  const [hyperlinkMode, setHyperlinkMode] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
 
+  // Animation state
+  const [lungingCardId, setLungingCardId] = useState<string | null>(null);
+  const [hittingTargetId, setHittingTargetId] = useState<string | "sysadmin" | null>(null);
+  const [damagePopup, setDamagePopup] = useState<{ targetId: string | "sysadmin"; amount: number; key: number } | null>(null);
+
   function addLog(msg: string) {
-    setLog((prev) => [`[T${turn}] ${msg}`, ...prev].slice(0, 20));
+    setLog((prev) => [`[T${turn}] ${msg}`, ...prev].slice(0, 30));
   }
 
   useEffect(() => {
@@ -45,68 +121,154 @@ export default function BattlefieldPage() {
       .finally(() => setLoadingInv(false));
   }, []);
 
+  // Auto-advance Task Manager and Refresh phases after a brief delay
+  useEffect(() => {
+    if (!AUTO_ADVANCE.has(phase)) return;
+    const label = PHASES.find((p) => p.id === phase)?.label ?? phase;
+    addLog(`⟩ ${label} phase — auto-resolving...`);
+    const t = setTimeout(() => advancePhase(), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, turn]);
+
   function handleStartGame() {
     if (inventory.length === 0) return;
     startGame(inventory);
     setLog(["⟩ Battle initiated. SysAdmin vs SysAdmin. May the best domain win."]);
+    setAttackMode(false);
+    setHyperlinkMode(null);
   }
 
   function handlePlayCard(instanceId: string) {
     const card = playerHand.find((c) => c.instanceId === instanceId);
     if (!card) return;
-    const cost = Math.max(1, Math.round((card.baseAttack + card.baseDef) / 3));
-    if (playerConnections < cost) {
-      addLog(`✕ Not enough connections to deploy ${card.url} (need ${cost})`);
+    if (playerBW <= card.baseConnection) {
+      addLog(`✕ Not enough BW to deploy ${card.url} (need >${card.baseConnection} BW)`);
       return;
     }
     playCard(instanceId);
-    addLog(`▶ Deployed ${card.url} (cost: ${cost} connections)`);
+    addLog(`▶ Deployed ${card.url} — cost ${card.baseConnection} BW`);
     selectCard(null);
   }
 
-  function handleBoardClick(card: BattlefieldCard) {
-    if (card.position === "player") {
-      if (card.isTapped) {
-        addLog(`⚠ ${card.url} is already tapped.`);
+  function handleAdvancePhase() {
+    if (phase === "browsing") addLog("⟩ Entering Execution phase — declare attacks.");
+    if (phase === "execution") addLog("⟩ Cleanup — ending turn...");
+    advancePhase();
+    setAttackMode(false);
+    setHyperlinkMode(null);
+    selectCard(null);
+  }
+
+  function handlePlayerBoardClick(card: BattlefieldCard) {
+    if (phase !== "execution" && phase !== "browsing") return;
+
+    // Hyperlink mode: link card to hub
+    if (hyperlinkMode && phase === "browsing") {
+      if (card.instanceId === hyperlinkMode) {
+        setHyperlinkMode(null);
         return;
       }
-      if (attackMode && selectedCard === card.instanceId) {
-        setAttackMode(false);
-        selectCard(null);
-      } else {
-        selectCard(card.instanceId);
-        setAttackMode(true);
-        addLog(`⟩ ${card.url} ready to attack. Click enemy card or SysAdmin.`);
-      }
-    } else if (card.position === "opponent" && attackMode && selectedCard) {
-      attackWithCard(selectedCard, card.instanceId);
-      addLog(`⚔ Attacked ${card.url}!`);
+      hyperlinkCard(card.instanceId, hyperlinkMode);
+      addLog(`🔗 Linked ${card.url} to hub`);
+      setHyperlinkMode(null);
+      return;
+    }
+
+    if (phase !== "execution") return;
+
+    if (card.isTapped) {
+      addLog(`⚠ ${card.url} is already tapped.`);
+      return;
+    }
+    if (attackMode && selectedCard === card.instanceId) {
       setAttackMode(false);
       selectCard(null);
+    } else {
+      selectCard(card.instanceId);
+      setAttackMode(true);
+      addLog(`⟩ ${card.url} ready to attack — click an enemy card or SysAdmin.`);
     }
+  }
+
+  function triggerAttackAnimation(
+    attackerId: string,
+    targetId: string | "sysadmin",
+    damage: number,
+    logMsg: string
+  ) {
+    setAttackMode(false);
+    selectCard(null);
+    setLungingCardId(attackerId);
+
+    // Impact hits at 65% of lunge duration (~420ms)
+    setTimeout(() => {
+      setHittingTargetId(targetId);
+      setDamagePopup({ targetId, amount: damage, key: Date.now() });
+    }, 380);
+
+    // Commit game state after lunge completes
+    setTimeout(() => {
+      attackWithCard(attackerId, targetId);
+      setLungingCardId(null);
+      addLog(logMsg);
+    }, 700);
+
+    // Clear hit effect
+    setTimeout(() => {
+      setHittingTargetId(null);
+    }, 900);
+
+    // Clear damage popup after it floats away
+    setTimeout(() => {
+      setDamagePopup(null);
+    }, 1300);
+  }
+
+  function handleOpponentBoardClick(card: BattlefieldCard) {
+    if (!attackMode || !selectedCard) return;
+    const attacker = playerBoard.find((c) => c.instanceId === selectedCard);
+    if (!attacker) return;
+    const linkedAtk = attacker.isHub
+      ? (hyperlinks[selectedCard] ?? []).reduce((sum, lid) => {
+          const l = playerBoard.find((c) => c.instanceId === lid);
+          return sum + (l?.baseAttack ?? 0);
+        }, 0)
+      : 0;
+    const damage = attacker.baseAttack + linkedAtk;
+    triggerAttackAnimation(
+      selectedCard,
+      card.instanceId,
+      damage,
+      `⚔ Attacked ${card.url} for ${damage} damage!`
+    );
   }
 
   function handleAttackSysAdmin() {
     if (!attackMode || !selectedCard) return;
-    attackWithCard(selectedCard, "sysadmin");
+    const hasFirewall = opponentBoard.some((c) => c.isFirewall);
+    if (hasFirewall) {
+      addLog("🛡 BLOCKED — Enemy Firewall must be destroyed first!");
+      return;
+    }
     const attacker = playerBoard.find((c) => c.instanceId === selectedCard);
-    addLog(`⚔ Direct attack on enemy SysAdmin for ${attacker?.baseAttack ?? "?"} damage!`);
-    setAttackMode(false);
-    selectCard(null);
+    const baseAtk = attacker?.baseAttack ?? 0;
+    const linkedAtk = attacker?.isHub
+      ? (hyperlinks[selectedCard] ?? []).reduce((sum, lid) => {
+          const l = playerBoard.find((c) => c.instanceId === lid);
+          return sum + (l?.baseAttack ?? 0);
+        }, 0)
+      : 0;
+    const damage = baseAtk + linkedAtk;
+    triggerAttackAnimation(
+      selectedCard,
+      "sysadmin",
+      damage,
+      `⚔ Direct attack on enemy SysAdmin for ${damage} BW damage!`
+    );
   }
 
-  function handleEndTurn() {
-    addLog("⟩ Turn ended. AI SysAdmin is attacking...");
-    endTurn();
-    setAttackMode(false);
-    selectCard(null);
-  }
-
-  const hpBar = (hp: number, max = 30) => {
-    const pct = Math.max(0, Math.min(100, (hp / max) * 100));
-    const color = pct > 50 ? "bg-green-500" : pct > 25 ? "bg-yellow-500" : "bg-red-500";
-    return { pct, color };
-  };
+  // ── Idle screen ─────────────────────────────────────────────────────────────
 
   if (phase === "idle") {
     return (
@@ -122,12 +284,12 @@ export default function BattlefieldPage() {
             <div className="text-6xl mb-4">⚔</div>
             <h2 className="text-2xl font-bold text-red-400 mb-2 tracking-widest">SysAdmin vs SysAdmin</h2>
             <p className="text-gray-500 text-sm mb-8 max-w-md mx-auto">
-              Deploy your domain cards and defeat the enemy SysAdmin. Each SysAdmin starts with 30 HP.
-              Reduce your opponent to 0 to trigger a Blue Screen of Death.
+              Deploy your domain cards and drain the enemy SysAdmin&apos;s Bandwidth to zero.
+              Every card you play costs BW — and so does every hit you take.
             </p>
 
             {loadingInv ? (
-              <div className="text-gray-600 text-sm">Loading your deck...</div>
+              <div className="text-gray-600 text-sm">Loading your cache...</div>
             ) : inventory.length === 0 ? (
               <div>
                 <p className="text-yellow-400 text-sm mb-4">
@@ -137,7 +299,7 @@ export default function BattlefieldPage() {
             ) : (
               <div>
                 <p className="text-gray-400 text-xs mb-6">
-                  {inventory.length} cards available in your collection. 5 will be drawn to your starting hand.
+                  {inventory.length} cards in your Cache. 5 will be drawn to your starting Bookmark Bar.
                 </p>
                 <button
                   onClick={handleStartGame}
@@ -148,11 +310,22 @@ export default function BattlefieldPage() {
               </div>
             )}
 
-            {/* Rules summary */}
             <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-              <RuleCard icon="⚡" title="Connections (Mana)" desc="Starts at 1 each turn, caps at 10 on turn 10. Deploy cost = (ATK + HP) / 3." />
-              <RuleCard icon="⚔" title="Combat" desc="Select a card on your board, then click an enemy card or SysAdmin to attack." />
-              <RuleCard icon="💀" title="Win Condition" desc="Reduce opponent SysAdmin to 0 HP to trigger Blue Screen of Death." />
+              <RuleCard
+                icon="📶"
+                title="Bandwidth (BW)"
+                desc="You have 100 BW. Playing cards AND taking damage drains it. Hit 0 and you disconnect — you lose."
+              />
+              <RuleCard
+                icon="🔗"
+                title="Hyperlinking"
+                desc="Hub cards (high CONN) can link same-TLD cards. Linked cards combine ATK. Destroy the Hub = 404 Error for all links."
+              />
+              <RuleCard
+                icon="🛡"
+                title="Firewall"
+                desc=".gov / Government cards become Firewalls. Enemy SysAdmin cannot be attacked directly until all Firewalls are destroyed."
+              />
             </div>
           </div>
         </main>
@@ -160,16 +333,18 @@ export default function BattlefieldPage() {
     );
   }
 
+  // ── Victory / Defeat ────────────────────────────────────────────────────────
+
   if (phase === "victory" || phase === "defeat") {
     return (
       <div className="min-h-screen matrix-bg flex items-center justify-center">
         <Navbar />
-        <div className="text-center">
+        <div className="text-center px-4">
           {phase === "victory" ? (
             <>
               <div className="text-yellow-400 text-6xl mb-4">✓</div>
               <h1 className="text-3xl font-bold text-yellow-400 tracking-widest mb-2">VICTORY</h1>
-              <p className="text-gray-400 text-sm mb-6">Enemy SysAdmin suffered a Blue Screen of Death.</p>
+              <p className="text-gray-400 text-sm mb-6">Enemy SysAdmin&apos;s Bandwidth reached zero. Connection terminated.</p>
               <div className="text-green-400 text-xs font-mono mb-8 border border-green-900 bg-green-950/20 px-4 py-2 rounded">
                 + 50 Standard Coins awarded
               </div>
@@ -178,11 +353,11 @@ export default function BattlefieldPage() {
             <>
               <div className="text-blue-400 text-6xl mb-4 font-bold animate-pulse">:-(</div>
               <h1 className="text-3xl font-bold text-blue-400 tracking-widest mb-2">BLUE SCREEN OF DEATH</h1>
-              <p className="text-gray-400 text-sm mb-8">Your SysAdmin has crashed. Better luck next time.</p>
+              <p className="text-gray-400 text-sm mb-8">Your Bandwidth reached zero. Connection lost.</p>
               <div className="font-mono text-xs text-blue-300 space-y-1 border border-blue-900 bg-blue-950/20 px-6 py-4 rounded mb-8">
                 <div>A problem has been detected and your SysAdmin</div>
-                <div>has been shut down to prevent damage.</div>
-                <div className="mt-2">SYSADMIN_EXCEPTION_NOT_HANDLED</div>
+                <div>has been shut down to prevent further damage.</div>
+                <div className="mt-2">BANDWIDTH_EXCEPTION_NOT_HANDLED</div>
               </div>
             </>
           )}
@@ -197,8 +372,11 @@ export default function BattlefieldPage() {
     );
   }
 
-  const { pct: playerPct, color: playerColor } = hpBar(playerHP);
-  const { pct: opponentPct, color: opponentColor } = hpBar(opponentHP);
+  // ── Active game ─────────────────────────────────────────────────────────────
+
+  const opponentFirewall = opponentBoard.some((c) => c.isFirewall);
+  const overloadWarning = playerBoard.length === 6;
+  const isAutoPhase = AUTO_ADVANCE.has(phase);
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -206,131 +384,277 @@ export default function BattlefieldPage() {
 
       <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full px-2 py-3 gap-2">
 
-        {/* Opponent zone */}
+        {/* ── Opponent zone ──────────────────────────────────────────────── */}
         <div className="border border-red-900/30 bg-red-950/10 rounded-lg p-3">
-          {/* Opponent SysAdmin */}
           <div className="flex items-center justify-between mb-3">
+            {/* SysAdmin avatar — animates on direct hit */}
             <div
-              className={`flex items-center gap-3 cursor-pointer group ${attackMode && selectedCard ? "hover:ring-2 hover:ring-red-400 rounded p-1" : ""}`}
+              className={`flex items-center gap-3 ${
+                attackMode && selectedCard && !opponentFirewall && !lungingCardId
+                  ? "cursor-crosshair rounded p-1 target-ready"
+                  : opponentFirewall
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
               onClick={handleAttackSysAdmin}
             >
-              <div className="w-10 h-10 border-2 border-red-700 rounded bg-red-950/50 flex items-center justify-center text-red-400 text-lg">AI</div>
+              <div className="relative">
+                <div
+                  className={`w-10 h-10 border-2 rounded bg-red-950/50 flex items-center justify-center text-lg
+                    ${hittingTargetId === "sysadmin" ? "sysadmin-hit border-red-400 text-red-300" : "border-red-700 text-red-400"}
+                  `}
+                >
+                  AI
+                </div>
+                {/* Damage popup on SysAdmin */}
+                {damagePopup?.targetId === "sysadmin" && (
+                  <div
+                    key={damagePopup.key}
+                    className="damage-float absolute -top-2 left-1/2 -translate-x-1/2 text-red-400 font-bold font-mono whitespace-nowrap"
+                    style={{ fontSize: "13px" }}
+                  >
+                    −{damagePopup.amount} BW
+                  </div>
+                )}
+                {/* Hit flash overlay on SysAdmin */}
+                {hittingTargetId === "sysadmin" && (
+                  <div className="hit-overlay rounded" />
+                )}
+              </div>
               <div>
                 <div className="text-red-400 text-xs font-bold">ENEMY SYSADMIN</div>
-                <div className="text-white font-bold">{opponentHP} HP</div>
-                <div className="w-32 h-1.5 bg-gray-800 rounded-full mt-1">
-                  <div className={`h-full ${opponentColor} rounded-full transition-all`} style={{ width: `${opponentPct}%` }} />
-                </div>
+                <BWBar bw={opponentBW} label="" />
               </div>
               {attackMode && selectedCard && (
-                <div className="text-red-400 text-xs animate-pulse ml-2">← Attack here</div>
+                opponentFirewall ? (
+                  <div className="text-orange-500 text-xs ml-2">🛡 FIREWALL ACTIVE</div>
+                ) : (
+                  <div className="text-red-400 text-xs animate-pulse ml-2">← Attack here</div>
+                )
               )}
             </div>
-            <div className="text-xs text-gray-600">
-              <div>{opponentBoard.length} cards deployed</div>
-              <div>{graveyard.length} crashed</div>
+            <div className="text-xs text-gray-600 text-right">
+              <div>{opponentBoard.length} active tabs</div>
+              <div className="text-gray-800">{browsingHistory.length} in history</div>
             </div>
           </div>
 
-          {/* Opponent board */}
+          {/* Opponent Active Tabs */}
+          <div className="text-[9px] text-gray-700 uppercase tracking-widest mb-1">
+            Active Tabs ({opponentBoard.length})
+          </div>
           <div className="flex flex-wrap gap-2 min-h-[120px] items-center justify-center">
             {opponentBoard.length === 0 ? (
-              <div className="text-gray-800 text-xs">— No cards deployed —</div>
+              <div className="text-gray-800 text-xs">— No tabs open —</div>
             ) : (
-              opponentBoard.map((card) => (
-                <div
-                  key={card.instanceId}
-                  onClick={() => attackMode && selectedCard ? handleBoardClick(card) : undefined}
-                  className={attackMode && selectedCard ? "cursor-crosshair hover:ring-2 hover:ring-red-400 rounded-lg" : ""}
-                >
-                  <Card
-                    card={card}
-                    size="sm"
-                    dimmed={!attackMode || !selectedCard}
-                  />
-                </div>
-              ))
+              opponentBoard.map((card) => {
+                const isHit = hittingTargetId === card.instanceId;
+                const hasDamage = damagePopup?.targetId === card.instanceId;
+                const isTargetable = !!(attackMode && selectedCard && !lungingCardId);
+                return (
+                  <div
+                    key={card.instanceId}
+                    onClick={() => handleOpponentBoardClick(card)}
+                    className={[
+                      "relative",
+                      isTargetable ? "target-ready" : "",
+                    ].join(" ")}
+                  >
+                    <div className={isHit ? "card-hit" : ""}>
+                      <Card card={card} size="sm" dimmed={!isTargetable} />
+                    </div>
+                    {/* Red overlay flash on hit */}
+                    {isHit && <div className="hit-overlay rounded-lg" />}
+                    {/* Floating damage number */}
+                    {hasDamage && (
+                      <div
+                        key={damagePopup!.key}
+                        className="damage-float absolute -top-4 left-1/2 -translate-x-1/2 text-red-400 font-bold font-mono whitespace-nowrap"
+                        style={{ fontSize: "13px" }}
+                      >
+                        −{damagePopup!.amount}
+                      </div>
+                    )}
+                    {/* Crosshair overlay label when targetable */}
+                    {isTargetable && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="text-red-400 text-lg opacity-70">⊕</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Center info bar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-900/50 border border-gray-800 rounded text-xs">
+        {/* ── Center control bar ─────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-900/50 border border-gray-800 rounded text-xs gap-2 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="text-gray-500">Turn: <span className="text-white font-bold">{turn}</span></div>
-            <div className="flex items-center gap-1">
-              <span className="text-yellow-400">⚡</span>
-              <span className="text-white font-bold">{playerConnections}</span>
-              <span className="text-gray-600">/ {maxConnections} connections</span>
-            </div>
+            <div className="text-gray-500">Turn <span className="text-white font-bold">{turn}</span></div>
+            <PhaseBar phase={phase} />
           </div>
 
-          <div className="flex gap-2">
-            {attackMode && (
-              <span className="text-red-400 animate-pulse font-bold uppercase">SELECT TARGET</span>
+          <div className="flex items-center gap-2">
+            {hyperlinkMode && (
+              <span className="text-cyan-400 animate-pulse font-bold uppercase text-[10px]">
+                🔗 Select card to link (same TLD)
+              </span>
             )}
-            {phase === "main" && (
+            {overloadWarning && phase === "browsing" && (
+              <span className="text-yellow-400 font-bold text-[10px]">
+                ⚠ 1 tab until OVERLOAD
+              </span>
+            )}
+            {isAutoPhase ? (
+              <span className="text-gray-600 text-[10px] italic">auto-resolving...</span>
+            ) : (
               <button
-                onClick={handleEndTurn}
-                className="bg-orange-900/60 hover:bg-orange-800/60 border border-orange-700 text-orange-300 font-bold px-4 py-1 rounded transition-all uppercase tracking-widest"
+                onClick={handleAdvancePhase}
+                disabled={!!lungingCardId}
+                className="bg-orange-900/60 hover:bg-orange-800/60 border border-orange-700 text-orange-300 font-bold px-4 py-1 rounded transition-all uppercase tracking-widest disabled:opacity-40"
               >
-                END TURN →
+                {phase === "browsing" ? "ATTACK PHASE →" : phase === "execution" ? "END TURN →" : "NEXT →"}
               </button>
             )}
           </div>
 
-          <div className="text-gray-500">
-            Graveyard: <span className="text-gray-400">{graveyard.length}</span>
+          <div className="text-gray-600 text-right">
+            Cache: <span className="text-gray-400">{playerCache.length}</span>
+            <span className="mx-1">·</span>
+            History: <span className="text-gray-400">{browsingHistory.length}</span>
           </div>
         </div>
 
-        {/* Player board */}
+        {/* ── Execution phase instruction banner ─────────────────────────── */}
+        {phase === "execution" && !isAutoPhase && (
+          <div className={`rounded border px-4 py-2 flex items-center justify-between gap-3 transition-all ${
+            attackMode
+              ? "border-red-700/60 bg-red-950/30"
+              : "border-cyan-900/60 bg-cyan-950/20"
+          }`}>
+            <div className="flex items-center gap-2">
+              {attackMode ? (
+                <>
+                  <span className="text-red-400 text-lg animate-pulse">⚔</span>
+                  <div>
+                    <div className="text-red-300 font-bold text-xs uppercase tracking-widest">Step 2 — Click an enemy card or the enemy SysAdmin to attack</div>
+                    <div className="text-red-700 text-[10px] mt-0.5">
+                      Attacker: <span className="text-red-400 font-mono">{playerBoard.find(c => c.instanceId === selectedCard)?.url}</span>
+                      <span className="mx-1">·</span>
+                      ATK: <span className="text-red-300 font-bold">{(() => {
+                        const atk = playerBoard.find(c => c.instanceId === selectedCard);
+                        const linked = atk?.isHub ? (hyperlinks[selectedCard!] ?? []).reduce((s, lid) => s + (playerBoard.find(c => c.instanceId === lid)?.baseAttack ?? 0), 0) : 0;
+                        return (atk?.baseAttack ?? 0) + linked;
+                      })()}</span>
+                      <span className="ml-2 text-gray-700">— or click your card again to cancel</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="text-cyan-400 text-lg">⚡</span>
+                  <div>
+                    <div className="text-cyan-300 font-bold text-xs uppercase tracking-widest">Step 1 — Click one of your cards below to select an attacker</div>
+                    <div className="text-cyan-900 text-[10px] mt-0.5">Glowing cards are ready to attack. Tapped cards have already attacked this turn.</div>
+                  </div>
+                </>
+              )}
+            </div>
+            {attackMode && (
+              <button
+                onClick={() => { setAttackMode(false); selectCard(null); }}
+                className="text-[10px] text-gray-600 hover:text-gray-400 border border-gray-800 px-2 py-0.5 rounded shrink-0"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Player Active Tabs ─────────────────────────────────────────── */}
         <div className="border border-cyan-900/30 bg-cyan-950/10 rounded-lg p-3">
+          <div className="text-[9px] text-gray-700 uppercase tracking-widest mb-1">
+            Active Tabs ({playerBoard.length} / 7)
+            {overloadWarning && (
+              <span className="text-yellow-500 ml-2">⚠ OVERLOAD IMMINENT</span>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2 min-h-[120px] items-center justify-center mb-3">
             {playerBoard.length === 0 ? (
-              <div className="text-gray-800 text-xs">— Play cards from your hand to deploy here —</div>
+              <div className="text-gray-800 text-xs">— Play cards from your Bookmark Bar to open tabs here —</div>
             ) : (
-              playerBoard.map((card) => (
-                <div
-                  key={card.instanceId}
-                  onClick={() => handleBoardClick(card)}
-                  className="cursor-pointer"
-                >
-                  <Card
-                    card={card}
-                    size="sm"
-                    selected={selectedCard === card.instanceId}
-                  />
-                </div>
-              ))
+              playerBoard.map((card) => {
+                const isHubMode = hyperlinkMode === card.instanceId;
+                const isLinked = !!card.linkedTo;
+                const hubCard = isLinked ? playerBoard.find((c) => c.instanceId === card.linkedTo) : null;
+                const isLunging = lungingCardId === card.instanceId;
+                // Glow cyan when this card can be selected as attacker
+                const isAttackReady = phase === "execution" && !card.isTapped && !attackMode && !lungingCardId;
+                // Glow when this card is the selected attacker
+                const isSelected = selectedCard === card.instanceId;
+                return (
+                  <div key={card.instanceId} className="relative" style={{ marginTop: isLinked ? "12px" : undefined }}>
+                    {isLinked && hubCard && (
+                      <div className="absolute -top-3 left-0 right-0 text-center text-[8px] text-cyan-600 font-mono truncate px-1">
+                        🔗 {hubCard.url}
+                      </div>
+                    )}
+                    <div
+                      onClick={() => handlePlayerBoardClick(card)}
+                      className={[
+                        "cursor-pointer",
+                        isHubMode ? "ring-2 ring-cyan-400 rounded-lg" : "",
+                        isLunging ? "card-lunge" : "",
+                        isAttackReady ? "attack-ready" : "",
+                        isSelected ? "ring-2 ring-white rounded-lg" : "",
+                      ].join(" ")}
+                    >
+                      <Card
+                        card={card}
+                        size="sm"
+                        selected={isSelected}
+                      />
+                    </div>
+                    {/* Hub: show link button if in browsing phase */}
+                    {card.isHub && phase === "browsing" && !card.isTapped && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHyperlinkMode(hyperlinkMode === card.instanceId ? null : card.instanceId);
+                        }}
+                        className="absolute -bottom-4 left-0 right-0 mx-auto w-fit text-[8px] bg-cyan-900/70 border border-cyan-700 text-cyan-300 px-1.5 rounded hover:bg-cyan-800"
+                      >
+                        🔗 LINK {(hyperlinks[card.instanceId] ?? []).length}/{card.baseConnection}
+                      </button>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
 
           {/* Player SysAdmin */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 border-2 border-cyan-700 rounded bg-cyan-950/50 flex items-center justify-center text-cyan-400 text-lg">⟨/⟩</div>
-              <div>
-                <div className="text-cyan-400 text-xs font-bold">YOUR SYSADMIN</div>
-                <div className="text-white font-bold">{playerHP} HP</div>
-                <div className="w-32 h-1.5 bg-gray-800 rounded-full mt-1">
-                  <div className={`h-full ${playerColor} rounded-full transition-all`} style={{ width: `${playerPct}%` }} />
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 border-2 border-cyan-700 rounded bg-cyan-950/50 flex items-center justify-center text-cyan-400 text-lg">⟨/⟩</div>
+            <div>
+              <div className="text-cyan-400 text-xs font-bold">YOUR SYSADMIN</div>
+              <BWBar bw={playerBW} label="" />
             </div>
           </div>
         </div>
 
-        {/* Player hand */}
+        {/* ── Bookmark Bar (Hand) ────────────────────────────────────────── */}
         <div className="border border-gray-800 bg-gray-900/30 rounded-lg p-3">
-          <div className="text-xs text-gray-600 uppercase tracking-widest mb-2">Hand ({playerHand.length} cards)</div>
+          <div className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">
+            Bookmark Bar ({playerHand.length} / 7 cards)
+          </div>
           <div className="flex flex-wrap gap-2 items-end justify-center min-h-[80px]">
             {playerHand.length === 0 ? (
               <div className="text-gray-800 text-xs self-center">No cards in hand</div>
             ) : (
               playerHand.map((card) => {
-                const cost = Math.max(1, Math.round((card.baseAttack + card.baseDef) / 3));
-                const canPlay = playerConnections >= cost && phase === "main";
+                const canPlay = phase === "browsing" && playerBW > card.baseConnection;
                 return (
                   <Card
                     key={card.instanceId}
@@ -338,14 +662,19 @@ export default function BattlefieldPage() {
                     size="sm"
                     selected={selectedCard === card.instanceId}
                     dimmed={!canPlay}
-                    connectionCost={cost}
+                    connectionCost={card.baseConnection}
                     showCost
                     onClick={() => {
-                      if (attackMode) { setAttackMode(false); selectCard(null); return; }
+                      if (attackMode || hyperlinkMode) {
+                        setAttackMode(false);
+                        setHyperlinkMode(null);
+                        selectCard(null);
+                        return;
+                      }
                       if (canPlay) {
                         handlePlayCard(card.instanceId);
-                      } else {
-                        addLog(`✕ Need ${cost} connections to play ${card.url}`);
+                      } else if (phase === "browsing") {
+                        addLog(`✕ Need >${card.baseConnection} BW to play ${card.url} (have ${playerBW})`);
                       }
                     }}
                   />
@@ -355,11 +684,15 @@ export default function BattlefieldPage() {
           </div>
         </div>
 
-        {/* Combat log */}
+        {/* ── Combat log ────────────────────────────────────────────────── */}
         <div className="border border-gray-900 bg-black/30 rounded p-2 max-h-24 overflow-y-auto">
-          {log.map((entry, i) => (
-            <div key={i} className="text-xs text-gray-600 font-mono">{entry}</div>
-          ))}
+          {log.length === 0 ? (
+            <div className="text-gray-800 text-xs font-mono">— log empty —</div>
+          ) : (
+            log.map((entry, i) => (
+              <div key={i} className="text-xs text-gray-600 font-mono">{entry}</div>
+            ))
+          )}
         </div>
       </div>
     </div>
