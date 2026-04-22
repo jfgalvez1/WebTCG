@@ -106,6 +106,9 @@ function toBattlefieldCard(
 }
 
 function createOpponentDeck(): CardInstance[] {
+  // All cards balanced via the guide formula: Connection = (ATK + DEF) / 2 + Effect Tax
+  // Glass Cannon tax: ATK > DEF×2 → +2 | ATK > DEF×1.5 → +1
+  // Firewall tax (Government): +3  |  Hub: conn ≥ 6 (no extra tax; Hub IS the high conn)
   const aiDomains: Array<{
     url: string;
     attack: number;
@@ -113,14 +116,26 @@ function createOpponentDeck(): CardInstance[] {
     conn: number;
     factions: string[];
   }> = [
-    { url: "evil-corp.com", attack: 4, def: 6, conn: 5, factions: ["Tech"] },
-    { url: "hacknet.io", attack: 6, def: 4, conn: 5, factions: ["Tech"] },
-    { url: "botfarm.net", attack: 3, def: 3, conn: 3, factions: ["Neutral"] },
-    { url: "phisher.biz", attack: 5, def: 3, conn: 3, factions: ["E-Commerce"] },
-    { url: "darkweb.gov", attack: 2, def: 8, conn: 4, factions: ["Government"] },
-    { url: "malware.biz", attack: 4, def: 2, conn: 2, factions: ["E-Commerce"] },
-    { url: "rootkit.io", attack: 7, def: 5, conn: 8, factions: ["Tech"] },
-    { url: "spam-hub.net", attack: 3, def: 4, conn: 6, factions: ["Neutral"] },
+    // ── Fodder tier (ATK+DEF 4–10, Connection 2–5) ────────────────────────────
+    { url: "botfarm.net",   attack: 3,  def: 3, conn: 3, factions: ["Neutral"] },
+    // (3+3)/2 = 3 → conn 3
+    { url: "malware.net",   attack: 4,  def: 2, conn: 4, factions: ["Neutral"] },
+    // (4+2)/2 = 3, ATK > DEF×1.5 (4>3) → +1 → conn 4
+    // ── Standard tier (ATK+DEF 12–20, Connection 7–12) ────────────────────────
+    { url: "phisher.net",   attack: 5,  def: 5, conn: 5, factions: ["Neutral"] },
+    // (5+5)/2 = 5 → conn 5
+    { url: "hacknet.io",    attack: 7,  def: 3, conn: 7, factions: ["Tech"] },
+    // (7+3)/2 = 5, ATK > DEF×2 (7>6) → +2 → conn 7  (glass cannon)
+    { url: "rootkit.io",    attack: 8,  def: 6, conn: 7, factions: ["Tech"] },
+    // (8+6)/2 = 7 → conn 7
+    { url: "evil-corp.com", attack: 4,  def: 8, conn: 6, factions: ["Tech"] },
+    // (4+8)/2 = 6 → conn 6  → qualifies as Hub (conn ≥ 6)
+    // ── Special — Firewall (Wall + Government tax) ─────────────────────────────
+    { url: "darkweb.gov",   attack: 2,  def: 8, conn: 8, factions: ["Government"] },
+    // (2+8)/2 = 5, Firewall tax +3 → conn 8
+    // ── Boss tier (ATK+DEF 18, Connection 9) ──────────────────────────────────
+    { url: "0day.io",       attack: 10, def: 8, conn: 9, factions: ["Tech"] },
+    // (10+8)/2 = 9 → conn 9
   ];
 
   return aiDomains.map((d, i) => ({

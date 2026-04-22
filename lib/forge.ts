@@ -17,21 +17,54 @@ export function sanitizeUrl(input: string): string {
     .trim();
 }
 
+// ATK: log10 scale based on monthly traffic, bounded 1–15
+// Tier mapping: Fodder 1–3 | Standard 5–7 | Boss 9–12 | Legendary 15
 function calcAttack(monthlyVisits: number): number {
-  if (monthlyVisits < 10_000) return 1;
-  if (monthlyVisits < 1_000_000) return 3;
-  if (monthlyVisits < 100_000_000) return 5;
-  return 8;
+  const log = Math.log10(Math.max(1, monthlyVisits));
+  if (log < 4) return 1;   // < 10K
+  if (log < 5) return 2;   // 10K–100K
+  if (log < 6) return 3;   // 100K–1M
+  if (log < 7) return 5;   // 1M–10M
+  if (log < 8) return 7;   // 10M–100M
+  if (log < 9) return 9;   // 100M–1B
+  if (log < 10) return 12; // 1B–10B
+  return 15;               // 10B+
 }
 
+// DEF: domain age maps to bounded resilience, 2–14
+// Tier mapping: Fodder 2–4 | Standard 6–8 | Boss 10–12 | Legendary 14
 function calcDef(ageInYears: number): number {
-  return Math.max(1, Math.round(ageInYears * 2));
+  if (ageInYears < 2) return 2;
+  if (ageInYears < 5) return 4;
+  if (ageInYears < 10) return 6;
+  if (ageInYears < 15) return 8;
+  if (ageInYears < 20) return 10;
+  if (ageInYears < 25) return 12;
+  return 14;
 }
 
-function calcConnection(monthlyVisits: number, factions: string[]): number {
-  const visitScore = Math.min(60, Math.round(Math.log10(Math.max(1, monthlyVisits)) * 8) - 16);
-  const factionBonus = factions.length * 5;
-  return Math.max(10, Math.min(95, visitScore + factionBonus));
+// Connection: strict (ATK + DEF) / 2 base + Effect Taxes per the balancing guide.
+// Glass Cannon tax: ATK heavily dominant over DEF costs extra BW to deploy.
+// Firewall tax: Government cards add +3 (Firewall ability is a major board effect).
+// Pop-Up tax: .biz E-Commerce low-tier cards add +1 (offset passive BW drain).
+function calcConnection(atk: number, def: number, factions: string[], url: string): number {
+  let base = (atk + def) / 2;
+
+  // Glass cannon penalty
+  if (atk > def * 2) base += 2;
+  else if (atk > def * 1.5) base += 1;
+
+  // Firewall effect tax (+3)
+  const urlTld = url.split(".").pop() ?? "";
+  const isGov = urlTld === "gov" || factions.includes("Government");
+  if (isGov) base += 3;
+
+  // Pop-Up effect tax (+1 for .biz E-Commerce Fodder cards)
+  if (urlTld === "biz" && factions.includes("E-Commerce") && (atk + def) <= 8) {
+    base += 1;
+  }
+
+  return Math.max(1, Math.min(95, Math.round(base)));
 }
 
 function calcFactions(keywords: string[]): string[] {
@@ -50,8 +83,11 @@ function calcFactions(keywords: string[]): string[] {
   return factions.length > 0 ? factions : ["Neutral"];
 }
 
+// Mint cost in standard coins tiers aligned with ATK scale:
+// Legendary (ATK 15, 10B+ visits): 50,000 | Boss (ATK 9–12, 100M–10B): 10,000
+// Standard (ATK 5–7, 1M–100M): 1,000 | Fodder (ATK 2–3, 10K–1M): 200 | Trash: 50
 function calcMintCost(monthlyVisits: number): number {
-  if (monthlyVisits >= 1_000_000_000) return 50_000;
+  if (monthlyVisits >= 10_000_000_000) return 50_000;
   if (monthlyVisits >= 100_000_000) return 10_000;
   if (monthlyVisits >= 1_000_000) return 1_000;
   if (monthlyVisits >= 10_000) return 200;
@@ -118,7 +154,7 @@ export async function forgeDomain(rawUrl: string): Promise<ForgeResult> {
   const baseAttack = calcAttack(monthlyVisits);
   const baseDef = calcDef(ageInYears);
   const factions = calcFactions(keywords);
-  const baseConnection = calcConnection(monthlyVisits, factions);
+  const baseConnection = calcConnection(baseAttack, baseDef, factions, url);
   const mintCost = calcMintCost(monthlyVisits);
 
   return {

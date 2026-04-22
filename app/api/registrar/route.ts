@@ -63,9 +63,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Premium coin cost mirrors the new ATK tier scale (1–15):
+// Legendary ≥13 | Boss ≥9 | Standard ≥5 | Fodder ≥2 | Trash
 function calcMintCostFromAttack(attack: number): number {
-  if (attack >= 8) return 10_000;
+  if (attack >= 13) return 50_000;
+  if (attack >= 9) return 10_000;
   if (attack >= 5) return 1_000;
-  if (attack >= 3) return 200;
+  if (attack >= 2) return 200;
   return 50;
 }

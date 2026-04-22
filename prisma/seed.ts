@@ -22,13 +22,19 @@ async function main() {
 
   console.log(`✓ Created demo user: ${demoUser.email}`);
 
-  // Pre-populate some cards in the global dictionary
+  // Pre-populate some cards using the Connection = (ATK+DEF)/2 + Effect Tax formula.
+  // ATK: log10 visit scale (1–15). DEF: age step table (2–14).
   const seedCards = [
-    { url: "google.com", baseAttack: 8, baseDef: 52, baseConnection: 65, factions: ["Tech"], genesisMinted: false },
-    { url: "github.com", baseAttack: 5, baseDef: 32, baseConnection: 60, factions: ["Tech"], genesisMinted: false },
-    { url: "reddit.com", baseAttack: 5, baseDef: 38, baseConnection: 67, factions: ["Social", "Media"], genesisMinted: false },
-    { url: "twitch.tv", baseAttack: 5, baseDef: 26, baseConnection: 67, factions: ["Gaming", "Social"], genesisMinted: false },
-    { url: "wikipedia.org", baseAttack: 5, baseDef: 46, baseConnection: 55, factions: ["Education"], genesisMinted: false },
+    // google.com: 90B visits→ATK 15, 26yrs→DEF 14. (15+14)/2=14.5 → conn 15
+    { url: "google.com",    baseAttack: 15, baseDef: 14, baseConnection: 15, factions: ["Tech"],                genesisMinted: false },
+    // github.com: 800M visits→ATK 9, 16yrs→DEF 10. (9+10)/2=9.5 → conn 10
+    { url: "github.com",    baseAttack: 9,  baseDef: 10, baseConnection: 10, factions: ["Tech"],                genesisMinted: false },
+    // reddit.com: 4B visits→ATK 12, 19yrs→DEF 10. (12+10)/2=11 → conn 11
+    { url: "reddit.com",    baseAttack: 12, baseDef: 10, baseConnection: 11, factions: ["Social", "Media"],     genesisMinted: false },
+    // twitch.tv: 1.2B visits→ATK 12, 13yrs→DEF 8. (12+8)/2=10 → conn 10
+    { url: "twitch.tv",     baseAttack: 12, baseDef: 8,  baseConnection: 10, factions: ["Gaming", "Social"],   genesisMinted: false },
+    // wikipedia.org: 5B visits→ATK 12, 23yrs→DEF 12. (12+12)/2=12 → conn 12
+    { url: "wikipedia.org", baseAttack: 12, baseDef: 12, baseConnection: 12, factions: ["Education"],           genesisMinted: false },
   ];
 
   for (const card of seedCards) {
